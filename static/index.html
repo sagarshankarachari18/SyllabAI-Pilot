@@ -1,0 +1,2797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SyllabusPilot — AI University Study Planner</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 & Babel Standalone -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @keyframes bounceShort {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .animate-bounce-short {
+      animation: bounceShort 0.5s ease-in-out;
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-indigo-500 selection:text-white min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Multilingual Dictionary
+    // ─────────────────────────────────────────────────────────────────────────────
+    const TRANSLATIONS = {
+      en: {
+        appName: "SyllabusPilot",
+        badge: "AI Student Hub",
+        dashboard: "Dashboard",
+        uploadSyllabus: "Upload Syllabus",
+        extractedTasks: "Extracted Tasks",
+        weeklyPlan: "Weekly Study Plan",
+        pomodoro: "Focus Timer",
+        loadSample: "Load Sample Syllabus",
+        demoMode: "Demo Mode",
+        exportIcs: "Export .ics",
+        exportCsv: "Export CSV",
+        resetData: "Reset Data",
+        welcomeBack: "Welcome back,",
+        studentDefault: "Alex Morgan",
+        semesterInfo: "Fall 2026 Semester · Week 9 of 16",
+        midtermPeriod: "Midterms Period",
+        semesterProgress: "Semester Elapsed",
+        academicProgress: "Academic Progress",
+        completedOf: "completed",
+        activeCourses: "Active Courses",
+        coursesUploaded: "Courses Uploaded",
+        totalDeadlines: "Total Deadlines",
+        completedTasks: "Completed Tasks",
+        studyHoursWk: "Study Hours / Wk",
+        studyHoursCompleted: "Study Hours Completed",
+        workloadOverview: "Workload Overview",
+        workloadIntensity: "Workload Intensity",
+        workloadHeavy: "High (Exams Approaching)",
+        workloadBalanced: "Moderate & Balanced",
+        workloadLight: "Light & Manageable",
+        upcomingDeliverables: "Upcoming Assignments & Exams",
+        noUpcoming: "No upcoming deliverables! You are all caught up.",
+        viewAllTasks: "View All Tasks →",
+        logHour: "+ Log 1 hr",
+        logHourToast: "Logged 1 hour study session! Keep up the great work.",
+        editName: "Edit Profile",
+        dailyDistribution: "Daily Study Hours Activity",
+        courseDistribution: "Workload by Course",
+        aiInsightTitle: "AI Academic Workload Insight",
+        aiInsightDesc: "Based on assessment weights, MATH201 Midterm (35%) and CS101 Capstone Project (40%) comprise 75% of your upcoming grade impact. Focus review on Tuesday and Thursday.",
+        dueInDays: "Due in",
+        dueToday: "Due Today!",
+        markDone: "Mark Done",
+        completed: "Completed",
+        upcoming: "Upcoming",
+        due: "Due:",
+        workflowTitle: "Syllabus Workflow",
+        step1Title: "Upload Syllabus or Load Sample Data",
+        step1Desc: "Accepts PDF documents and course syllabus text.",
+        step2Title: "AI Extraction & Results Table",
+        step2Desc: "Gemini AI extracts Course, Task, Type, Deadline, and Weights.",
+        step3Title: "Weekly Planner & Calendar Export",
+        step3Desc: "Generate customized study blocks and download valid .ics calendar files.",
+        preferencesTitle: "Study Preferences",
+        preferencesDesc: "Configured preferences used to balance workload and generate study schedules.",
+        weeklyHours: "Weekly Study Hours",
+        preferredDays: "Preferred Days",
+        workloadStrategy: "Workload Strategy",
+        adjustPrefs: "Adjust Schedule Preferences",
+        uploadTitle: "Upload Course Syllabus",
+        uploadSubtitle: "Upload course documents (PDF or TXT) or paste your text. Gemini AI extracts all deadlines and assessment weights.",
+        dragDrop: "Drag & drop syllabus files here, or browse",
+        supportsText: "Supports PDF documents and plain text course outlines.",
+        loadSampleInstantly: "Load Sample Syllabus Instantly",
+        pasteTextTitle: "Or Paste Syllabus Text Directly",
+        pastePlaceholder: "Paste course syllabus, grading criteria, and exam dates here...",
+        extractAI: "Extract with AI",
+        uploadedDocs: "Uploaded Syllabus Documents",
+        tasksTitle: "Extracted Deadlines & Assessments",
+        tasksSubtitle: "Review, filter, search, and edit all deliverables extracted across your courses.",
+        addTask: "+ Add Custom Task",
+        generatePlanBtn: "Generate Study Plan →",
+        searchPlaceholder: "Search tasks or courses...",
+        sortBy: "Sort by:",
+        sortSoonest: "Deadline (Soonest)",
+        sortLatest: "Deadline (Latest)",
+        sortWeight: "Weight (Highest)",
+        sortCourse: "Course (A-Z)",
+        thCourse: "Course",
+        thTask: "Task / Deliverable",
+        thType: "Type",
+        thDeadline: "Deadline",
+        thWeight: "Weight",
+        thStatus: "Status",
+        thActions: "Actions",
+        noTasks: "No tasks found",
+        plannerTitle: "Weekly Study Plan & Workload",
+        plannerSubtitle: "Optimized week-by-week study plan balancing your course deadlines and study preferences.",
+        rescheduleBtn: "Reschedule / Unavailability",
+        exportCalendarBtn: "Export .ics Calendar",
+        focus: "Focus:",
+        scheduledDeliverables: "Scheduled Deliverables",
+        noDeadlinesWeek: "No major deadlines this week. Review notes & readings.",
+        statusActive: "Active",
+        notificationsTitle: "Notifications",
+        markAllRead: "Mark all read",
+        clearAll: "Clear all",
+        noNotifications: "No new notifications",
+        hoursPlanned: "hrs planned",
+        modalTitle: "Study Preferences & Rescheduling",
+        availableStudyHours: "Available Study Hours Per Week",
+        unavailabilityTitle: "Unavailable / Busy Days (Rescheduling)",
+        unavailabilityDesc: "SyllabusPilot will automatically redistribute workload and adjust deadlines.",
+        unavail0: "0 days (Fully available)",
+        unavail2: "Unavailable for 2 days (Busy)",
+        unavail3: "Unavailable for 3 days (Vacation / Sick)",
+        unavail5: "Unavailable for 5 days (Conference / Trip)",
+        balanced: "Balanced",
+        frontLoad: "Front-load",
+        easeIn: "Ease-in",
+        cancel: "Cancel",
+        savePlan: "Save & Regenerate Plan",
+        createNewTaskTitle: "Add New Course Deliverable",
+        taskName: "Task Name",
+        taskCourse: "Course Code",
+        taskType: "Deliverable Type",
+        taskDeadline: "Deadline Date",
+        taskWeight: "Assessment Weight",
+        saveTask: "Add Task",
+        timerTitle: "Pomodoro Focus Timer",
+        timerSubtitle: "Boost your academic productivity with 25-minute focus intervals and short breaks.",
+        focusSession: "Focus Session",
+        shortBreak: "Short Break",
+        startTimer: "Start Focus",
+        pauseTimer: "Pause",
+        resetTimer: "Reset Timer",
+        footer: "© 2026 SyllabusPilot AI. Built for university students to organize syllabus, track deadlines, and export calendars."
+      },
+      es: {
+        appName: "SyllabusPilot",
+        badge: "Centro Estudiantil IA",
+        dashboard: "Panel Profesional",
+        uploadSyllabus: "Subir Sílabo",
+        extractedTasks: "Entregas Extraídas",
+        weeklyPlan: "Plan de Estudio Semanal",
+        pomodoro: "Temporizador Focus",
+        loadSample: "Cargar Sílabo de Ejemplo",
+        demoMode: "Modo Demo",
+        exportIcs: "Exportar .ics",
+        exportCsv: "Exportar CSV",
+        resetData: "Reiniciar Datos",
+        welcomeBack: "Bienvenido de nuevo,",
+        studentDefault: "Alex Morgan",
+        semesterInfo: "Semestre Otoño 2026 · Semana 9 de 16",
+        midtermPeriod: "Período de Parciales",
+        semesterProgress: "Semestre Transcurrido",
+        academicProgress: "Progreso Académico",
+        completedOf: "completados",
+        activeCourses: "Cursos Activos",
+        coursesUploaded: "Cursos Registrados",
+        totalDeadlines: "Fechas Límite",
+        completedTasks: "Tareas Completadas",
+        studyHoursWk: "Horas / Sem",
+        studyHoursCompleted: "Horas de Estudio Completadas",
+        workloadOverview: "Resumen de Carga de Trabajo",
+        workloadIntensity: "Intensidad de Carga",
+        workloadHeavy: "Alta (Exámenes Cercanos)",
+        workloadBalanced: "Moderada y Equilibrada",
+        workloadLight: "Ligera",
+        upcomingDeliverables: "Próximos Exámenes y Tareas",
+        noUpcoming: "¡Todo al día! Sin entregas pendientes.",
+        viewAllTasks: "Ver Todas las Tareas →",
+        logHour: "+ Registrar 1h",
+        logHourToast: "¡1 hora de estudio registrada!",
+        editName: "Editar Perfil",
+        dailyDistribution: "Distribución Diaria de Estudio",
+        courseDistribution: "Carga por Curso",
+        aiInsightTitle: "Perspectiva de Carga Académica con IA",
+        aiInsightDesc: "Según la ponderación, el Parcial de MATH201 (35%) y el Proyecto CS101 (40%) representan el 75% del impacto en tus calificaciones.",
+        dueInDays: "Vence en",
+        dueToday: "¡Vence Hoy!",
+        markDone: "Marcar Hecho",
+        completed: "Completado",
+        upcoming: "Pendiente",
+        due: "Vence:",
+        workflowTitle: "Flujo de Trabajo",
+        step1Title: "Subir Sílabo o Datos de Ejemplo",
+        step1Desc: "Admite archivos PDF y texto de sílabos.",
+        step2Title: "Extracción IA y Tabla de Resultados",
+        step2Desc: "Gemini extrae Curso, Tarea, Tipo, Fecha límite y Ponderación.",
+        step3Title: "Planificador Semanal y Calendario",
+        step3Desc: "Genera bloques de estudio y descarga calendarios .ics.",
+        preferencesTitle: "Preferencias de Estudio",
+        preferencesDesc: "Configuraciones usadas para balancear la carga de trabajo.",
+        weeklyHours: "Horas Semanales",
+        preferredDays: "Días Preferidos",
+        workloadStrategy: "Estrategia",
+        adjustPrefs: "Ajustar Preferencias",
+        uploadTitle: "Subir Sílabo del Curso",
+        uploadSubtitle: "Sube documentos de cursos (PDF o TXT) o pega el texto.",
+        dragDrop: "Arrastra archivos aquí o busca en tu dispositivo",
+        supportsText: "Compatible con documentos PDF y texto plano.",
+        loadSampleInstantly: "Cargar Sílabo de Ejemplo",
+        pasteTextTitle: "O Pega el Texto Directamente",
+        pastePlaceholder: "Pega el contenido del sílabo aquí...",
+        extractAI: "Extraer con IA",
+        uploadedDocs: "Documentos Subidos",
+        tasksTitle: "Fechas Límite y Evaluaciones",
+        tasksSubtitle: "Revisa, filtra, busca y edita todas las entregas de tus cursos.",
+        addTask: "+ Agregar Tarea",
+        generatePlanBtn: "Generar Plan de Estudio →",
+        searchPlaceholder: "Buscar tareas o cursos...",
+        sortBy: "Ordenar por:",
+        sortSoonest: "Fecha (Más próxima)",
+        sortLatest: "Fecha (Más lejana)",
+        sortWeight: "Ponderación (Mayor)",
+        sortCourse: "Curso (A-Z)",
+        thCourse: "Curso",
+        thTask: "Tarea / Entrega",
+        thType: "Tipo",
+        thDeadline: "Fecha Límite",
+        thWeight: "Ponderación",
+        thStatus: "Estado",
+        thActions: "Acciones",
+        noTasks: "No se encontraron tareas",
+        plannerTitle: "Plan de Estudio Semanal y Carga",
+        plannerSubtitle: "Plan optimizado semana por semana equilibrando tus fechas límite.",
+        rescheduleBtn: "Reprogramar / Indisponibilidad",
+        exportCalendarBtn: "Exportar Calendario .ics",
+        focus: "Enfoque:",
+        scheduledDeliverables: "Entregables Programados",
+        noDeadlinesWeek: "Sin fechas críticas esta semana.",
+        statusActive: "Activo",
+        notificationsTitle: "Notificaciones",
+        markAllRead: "Marcar leídas",
+        clearAll: "Borrar todas",
+        noNotifications: "No hay notificaciones nuevas",
+        hoursPlanned: "hrs planificadas",
+        modalTitle: "Preferencias y Reprogramación",
+        availableStudyHours: "Horas Disponibles",
+        unavailabilityTitle: "Días Ocupados (Reprogramar)",
+        unavailabilityDesc: "SyllabusPilot redistribuirá automáticamente la carga.",
+        unavail0: "0 días (Disponible)",
+        unavail2: "2 días ocupados",
+        unavail3: "3 días (Enfermo / Viaje)",
+        unavail5: "5 días (Vacaciones)",
+        balanced: "Equilibrado",
+        frontLoad: "Carga Inicial",
+        easeIn: "Progresivo",
+        cancel: "Cancelar",
+        savePlan: "Guardar y Regenerar Plan",
+        createNewTaskTitle: "Agregar Nueva Entrega",
+        taskName: "Nombre de la Tarea",
+        taskCourse: "Código del Curso",
+        taskType: "Tipo",
+        taskDeadline: "Fecha Límite",
+        taskWeight: "Ponderación",
+        saveTask: "Guardar Tarea",
+        timerTitle: "Temporizador Pomodoro",
+        timerSubtitle: "Mejora tu productividad con bloques de 25 minutos y descansos breves.",
+        focusSession: "Sesión de Enfoque",
+        shortBreak: "Descanso Corto",
+        startTimer: "Iniciar",
+        pauseTimer: "Pausar",
+        resetTimer: "Reiniciar",
+        footer: "© 2026 SyllabusPilot AI. Creado para estudiantes universitarios."
+      },
+      fr: {
+        appName: "SyllabusPilot",
+        badge: "Pôle Étudiant IA",
+        dashboard: "Tableau de Bord",
+        uploadSyllabus: "Téléverser Syllabus",
+        extractedTasks: "Tâches Extraites",
+        weeklyPlan: "Planning Hebdomadaire",
+        pomodoro: "Minuteur Focus",
+        loadSample: "Charger Exemples",
+        demoMode: "Mode Démo",
+        exportIcs: "Exporter .ics",
+        exportCsv: "Exporter CSV",
+        resetData: "Réinitialiser",
+        welcomeBack: "Bienvenue,",
+        studentDefault: "Alex Morgan",
+        semesterInfo: "Semestre Automne 2026 · Semaine 9 sur 16",
+        midtermPeriod: "Période d'Examens Mi-Session",
+        semesterProgress: "Semestre Écoulé",
+        academicProgress: "Progression Académique",
+        completedOf: "complétés",
+        activeCourses: "Cours Actifs",
+        coursesUploaded: "Cours Téléversés",
+        totalDeadlines: "Échéances Totales",
+        completedTasks: "Tâches Terminées",
+        studyHoursWk: "Heures / Sem",
+        studyHoursCompleted: "Heures d'Étude Réalisées",
+        workloadOverview: "Aperçu de la Charge",
+        workloadIntensity: "Intensité de Charge",
+        workloadHeavy: "Élevée (Examens Proches)",
+        workloadBalanced: "Modérée et Équilibrée",
+        workloadLight: "Gérable",
+        upcomingDeliverables: "Examens & Devoirs Imminents",
+        noUpcoming: "Aucun devoir à venir ! Vous êtes à jour.",
+        viewAllTasks: "Voir Toutes les Tâches →",
+        logHour: "+ 1h d'étude",
+        logHourToast: "1 heure d'étude enregistrée !",
+        editName: "Modifier Profil",
+        dailyDistribution: "Activité d'Étude Quotidienne",
+        courseDistribution: "Charge par Matière",
+        aiInsightTitle: "Analyse IA de la Charge",
+        aiInsightDesc: "D'après les coefficients, l'examen MATH201 (35%) et le projet CS101 (40%) comptent pour 75% de vos notes à venir.",
+        dueInDays: "Échéance dans",
+        dueToday: "Aujourd'hui !",
+        markDone: "Fait",
+        completed: "Terminé",
+        upcoming: "À Venir",
+        due: "Échéance :",
+        workflowTitle: "Processus Syllabus",
+        step1Title: "Importer ou Charger des Exemples",
+        step1Desc: "Prend en charge les PDF et le texte des cours.",
+        step2Title: "Extraction IA & Tableau",
+        step2Desc: "Gemini extrait cours, échéances et coefficients.",
+        step3Title: "Planning Hebdomadaire & Calendrier",
+        step3Desc: "Générez vos blocs d'étude et synchronisez votre calendrier.",
+        preferencesTitle: "Préférences d'Étude",
+        preferencesDesc: "Paramètres utilisés pour équilibrer la charge de travail.",
+        weeklyHours: "Heures Hebdomadaires",
+        preferredDays: "Jours Préférés",
+        workloadStrategy: "Stratégie de Charge",
+        adjustPrefs: "Ajuster Préférences",
+        uploadTitle: "Importer le Syllabus",
+        uploadSubtitle: "Déposez vos fichiers PDF ou collez le texte du cours.",
+        dragDrop: "Glissez vos fichiers ici ou parcourez",
+        supportsText: "Prend en charge les fichiers PDF et le texte brut.",
+        loadSampleInstantly: "Charger Exemples Immédiatement",
+        pasteTextTitle: "Ou Coller le Texte Directement",
+        pastePlaceholder: "Collez le texte du syllabus ici...",
+        extractAI: "Extraire avec l'IA",
+        uploadedDocs: "Documents Importés",
+        tasksTitle: "Échéances et Évaluations",
+        tasksSubtitle: "Consultez, filtrez et modifiez toutes vos échéances.",
+        addTask: "+ Ajouter une Tâche",
+        generatePlanBtn: "Générer le Planning →",
+        searchPlaceholder: "Rechercher une tâche...",
+        sortBy: "Trier par :",
+        sortSoonest: "Date (Plus proche)",
+        sortLatest: "Date (Plus éloignée)",
+        sortWeight: "Coefficient (Élevé)",
+        sortCourse: "Cours (A-Z)",
+        thCourse: "Cours",
+        thTask: "Tâche / Devoir",
+        thType: "Type",
+        thDeadline: "Date Limite",
+        thWeight: "Coeff.",
+        thStatus: "Statut",
+        thActions: "Actions",
+        noTasks: "Aucune tâche trouvée",
+        plannerTitle: "Planning d'Étude Hebdomadaire",
+        plannerSubtitle: "Plan semaine par semaine équilibrant vos échéances.",
+        rescheduleBtn: "Reprogrammer / Absence",
+        exportCalendarBtn: "Exporter Calendrier .ics",
+        focus: "Objectif :",
+        scheduledDeliverables: "Livrables Prévus",
+        noDeadlinesWeek: "Pas d'échéance majeure cette semaine.",
+        statusActive: "Actif",
+        notificationsTitle: "Notifications",
+        markAllRead: "Tout marquer lu",
+        clearAll: "Effacer tout",
+        noNotifications: "Aucune notification",
+        hoursPlanned: "h prévues",
+        modalTitle: "Préférences & Reprogrammation",
+        availableStudyHours: "Heures Disponibles",
+        unavailabilityTitle: "Jours Indisponibles",
+        unavailabilityDesc: "SyllabusPilot redistribue votre charge d'étude.",
+        unavail0: "0 jour (Disponible)",
+        unavail2: "2 jours indisponibles",
+        unavail3: "3 jours (Malade / Voyage)",
+        unavail5: "5 jours (Vacances)",
+        balanced: "Équilibré",
+        frontLoad: "Intensif Début",
+        easeIn: "Progressif",
+        cancel: "Annuler",
+        savePlan: "Enregistrer & Recalculer",
+        createNewTaskTitle: "Ajouter une Tâche",
+        taskName: "Nom de la Tâche",
+        taskCourse: "Code du Cours",
+        taskType: "Type",
+        taskDeadline: "Date Limite",
+        taskWeight: "Coefficient",
+        saveTask: "Enregistrer",
+        timerTitle: "Minuteur Pomodoro",
+        timerSubtitle: "Boostez votre efficacité avec des sessions de 25 minutes.",
+        focusSession: "Session de Focus",
+        shortBreak: "Pause Courte",
+        startTimer: "Démarrer",
+        pauseTimer: "Pause",
+        resetTimer: "Réinitialiser",
+        footer: "© 2026 SyllabusPilot AI. Conçu pour les étudiants universitaires."
+      },
+      de: {
+        appName: "SyllabusPilot",
+        badge: "KI-Studienhub",
+        dashboard: "Dashboard",
+        uploadSyllabus: "Lehrplan Hochladen",
+        extractedTasks: "Aufgaben",
+        weeklyPlan: "Wochenlernplan",
+        pomodoro: "Fokus-Timer",
+        loadSample: "Beispiele Laden",
+        demoMode: "Demo-Modus",
+        exportIcs: ".ics Export",
+        exportCsv: "CSV Export",
+        resetData: "Zurücksetzen",
+        welcomeBack: "Willkommen zurück,",
+        studentDefault: "Alex Morgan",
+        semesterInfo: "Wintersemester 2026 · Woche 9 von 16",
+        midtermPeriod: "Zwischenprüfungsphase",
+        semesterProgress: "Semesterfortschritt",
+        academicProgress: "Akademischer Fortschritt",
+        completedOf: "abgeschlossen",
+        activeCourses: "Aktive Kurse",
+        coursesUploaded: "Kurse Hochgeladen",
+        totalDeadlines: "Fristen Gesamt",
+        completedTasks: "Erledigte Aufgaben",
+        studyHoursWk: "Lernstunden / Woche",
+        studyHoursCompleted: "Lernstunden Diese Woche",
+        workloadOverview: "Arbeitslast-Übersicht",
+        workloadIntensity: "Arbeitslast-Intensität",
+        workloadHeavy: "Hoch (Prüfungen Nahen)",
+        workloadBalanced: "Ausgewogen & Stabil",
+        workloadLight: "Überschaubar",
+        upcomingDeliverables: "Bevorstehende Prüfungen & Abgaben",
+        noUpcoming: "Keine anstehenden Aufgaben!",
+        viewAllTasks: "Alle Aufgaben Anzeigen →",
+        logHour: "+ 1 Std. Buchen",
+        logHourToast: "1 Lernstunde erfasst!",
+        editName: "Profil Bearbeiten",
+        dailyDistribution: "Tägliche Lernstunden",
+        courseDistribution: "Workload nach Kurs",
+        aiInsightTitle: "KI-Workload-Empfehlung",
+        aiInsightDesc: "MATH201 (35%) und CS101 Projekt (40%) machen 75% Ihrer bevorstehenden Benotung aus. Priorisieren Sie Dienstag und Donnerstag.",
+        dueInDays: "Fällig in",
+        dueToday: "Heute fällig!",
+        markDone: "Erledigt",
+        completed: "Erledigt",
+        upcoming: "Bevorstehend",
+        due: "Fällig:",
+        workflowTitle: "Arbeitsablauf",
+        step1Title: "Lehrplan hochladen oder Demodaten",
+        step1Desc: "Unterstützt PDF-Dokumente und Lehrplan-Texte.",
+        step2Title: "KI-Extraktion & Ergebnistabelle",
+        step2Desc: "Gemini extrahiert Kurs, Aufgabe, Typ, Frist und Gewichtung.",
+        step3Title: "Wochenplaner & Kalenderexport",
+        step3Desc: "Erstellen Sie maßgeschneiderte Lernblöcke und laden Sie .ics-Dateien herunter.",
+        preferencesTitle: "Lerneinstellungen",
+        preferencesDesc: "Einstellungen zur optimalen Arbeitslastverteilung.",
+        weeklyHours: "Wöchentliche Lernstunden",
+        preferredDays: "Bevorzugte Tage",
+        workloadStrategy: "Arbeitslast-Strategie",
+        adjustPrefs: "Einstellungen anpassen",
+        uploadTitle: "Kurs-Lehrplan Hochladen",
+        uploadSubtitle: "PDF oder TXT hochladen oder Text einfügen.",
+        dragDrop: "Dateien hier ablegen oder durchsuchen",
+        supportsText: "Unterstützt PDF-Dokumente und einfachen Text.",
+        loadSampleInstantly: "Beispieldaten Sofort Laden",
+        pasteTextTitle: "Oder Lehrplan-Text Direkt Einfügen",
+        pastePlaceholder: "Lehrplan, Kriterien und Prüfungstermine hier einfügen...",
+        extractAI: "Mit KI Extrahieren",
+        uploadedDocs: "Hochgeladene Dokumente",
+        tasksTitle: "Extrahierte Fristen & Prüfungen",
+        tasksSubtitle: "Prüfen, filtern, durchsuchen und bearbeiten Sie alle Aufgaben.",
+        addTask: "+ Aufgabe Hinzufügen",
+        generatePlanBtn: "Lernplan Erstellen →",
+        searchPlaceholder: "Aufgaben oder Kurse suchen...",
+        sortBy: "Sortieren nach:",
+        sortSoonest: "Frist (Zuerst fällig)",
+        sortLatest: "Frist (Später fällig)",
+        sortWeight: "Gewichtung (Höchste)",
+        sortCourse: "Kurs (A-Z)",
+        thCourse: "Kurs",
+        thTask: "Aufgabe / Abgabe",
+        thType: "Typ",
+        thDeadline: "Frist",
+        thWeight: "Gewichtung",
+        thStatus: "Status",
+        thActions: "Aktionen",
+        noTasks: "Keine Aufgaben gefunden",
+        plannerTitle: "Wöchentlicher Lernplan & Workload",
+        plannerSubtitle: "Optimierter Wochenplan basierend auf Ihren Fristen.",
+        rescheduleBtn: "Neu Planen / Abwesenheit",
+        exportCalendarBtn: ".ics Kalender Exportieren",
+        focus: "Schwerpunkt:",
+        scheduledDeliverables: "Geplante Abgaben",
+        noDeadlinesWeek: "Keine kritischen Fristen diese Woche.",
+        statusActive: "Aktiv",
+        notificationsTitle: "Benachrichtigungen",
+        markAllRead: "Alle als gelesen",
+        clearAll: "Alle löschen",
+        noNotifications: "Keine neuen Benachrichtigungen",
+        hoursPlanned: "Std. geplant",
+        modalTitle: "Einstellungen & Neuplanung",
+        availableStudyHours: "Verfügbare Lernstunden pro Woche",
+        unavailabilityTitle: "Abwesenheitstage (Neuplanung)",
+        unavailabilityDesc: "SyllabusPilot passt Ihre Arbeitslast automatisch an.",
+        unavail0: "0 Tage (Voll verfügbar)",
+        unavail2: "2 Tage abwesend",
+        unavail3: "3 Tage abwesend",
+        unavail5: "5 Tage abwesend",
+        balanced: "Ausgewogen",
+        frontLoad: "Vorgezogen",
+        easeIn: "Schrittweise",
+        cancel: "Abbrechen",
+        savePlan: "Speichern & Plan Neu Berechnen",
+        createNewTaskTitle: "Neue Aufgabe Erstellen",
+        taskName: "Aufgabenname",
+        taskCourse: "Kurskürzel",
+        taskType: "Typ",
+        taskDeadline: "Fristdatum",
+        taskWeight: "Gewichtung",
+        saveTask: "Aufgabe Speichern",
+        timerTitle: "Pomodoro Fokus-Timer",
+        timerSubtitle: "Steigern Sie die Produktivität mit 25-Minuten-Intervallen.",
+        focusSession: "Fokus-Sitzung",
+        shortBreak: "Kurze Pause",
+        startTimer: "Starten",
+        pauseTimer: "Pause",
+        resetTimer: "Zurücksetzen",
+        footer: "© 2026 SyllabusPilot AI. Entwickelt für Studierende."
+      },
+      zh: {
+        appName: "SyllabusPilot",
+        badge: "AI 学习助手",
+        dashboard: "智能仪表盘",
+        uploadSyllabus: "上传大纲",
+        extractedTasks: "提取的任务",
+        weeklyPlan: "每周计划",
+        pomodoro: "番茄专注钟",
+        loadSample: "加载示例大纲",
+        demoMode: "演示模式",
+        exportIcs: "导出 .ics",
+        exportCsv: "导出 CSV",
+        resetData: "重置数据",
+        welcomeBack: "欢迎回来，",
+        studentDefault: "Alex Morgan",
+        semesterInfo: "2026 秋季学期 · 第 9 周 / 共 16 周",
+        midtermPeriod: "期中考试阶段",
+        semesterProgress: "学期进度",
+        academicProgress: "学业完成度",
+        completedOf: "已完成",
+        activeCourses: "活跃课程",
+        coursesUploaded: "已录入课程",
+        totalDeadlines: "截止日期总数",
+        completedTasks: "已完成任务",
+        studyHoursWk: "每周学习目标",
+        studyHoursCompleted: "本周已投入学习时长",
+        workloadOverview: "学业负荷总览",
+        workloadIntensity: "负荷强度",
+        workloadHeavy: "高负荷 (考试临近)",
+        workloadBalanced: "均衡适中",
+        workloadLight: "轻松可控",
+        upcomingDeliverables: "近期考试与作业",
+        noUpcoming: "近期暂无截止任务，保持好状态！",
+        viewAllTasks: "查看所有任务 →",
+        logHour: "+ 记录 1 小时",
+        logHourToast: "已成功记录 1 小时自习时长！",
+        editName: "编辑个人信息",
+        dailyDistribution: "本周每日自习时长",
+        courseDistribution: "各科学习负荷占比",
+        aiInsightTitle: "AI 学业建议",
+        aiInsightDesc: "根据各项成绩权重，MATH201 期中考试 (35%) 与 CS101 毕业设计 (40%) 占据后续总评的 75%，建议重点攻坚复习。",
+        dueInDays: "剩余天数",
+        dueToday: "今天截止!",
+        markDone: "标为完成",
+        completed: "已完成",
+        upcoming: "待完成",
+        due: "截止:",
+        workflowTitle: "大纲处理流程",
+        step1Title: "上传课程大纲或加载示例",
+        step1Desc: "支持 PDF 文档和课程大纲文本。",
+        step2Title: "AI 提取与任务表格",
+        step2Desc: "Gemini AI 提取课程、任务、类型、截止日期与评分权重。",
+        step3Title: "周学习规划与日历导出",
+        step3Desc: "生成个性化学习模块并下载标准 .ics 日历文件。",
+        preferencesTitle: "学习偏好设置",
+        preferencesDesc: "用于平衡学习负荷与排期的偏好配置。",
+        weeklyHours: "每周学习时长",
+        preferredDays: "偏好的学习日",
+        workloadStrategy: "负荷策略",
+        adjustPrefs: "调整学习偏好",
+        uploadTitle: "上传课程大纲文件",
+        uploadSubtitle: "上传课程 PDF 或 TXT，或直接粘贴大纲文本。",
+        dragDrop: "拖放文件到此处，或点击浏览",
+        supportsText: "支持 PDF 课程大纲和纯文本内容。",
+        loadSampleInstantly: "立即加载示例数据",
+        pasteTextTitle: "或直接粘贴大纲文本",
+        pastePlaceholder: "在此粘贴大纲内容、评分要求和考试时间...",
+        extractAI: "使用 AI 智能提取",
+        uploadedDocs: "已上传的大纲文档",
+        tasksTitle: "提取的任务与截止日期",
+        tasksSubtitle: "查看、筛选、搜索并编辑所有课程任务。",
+        addTask: "+ 手动添加任务",
+        generatePlanBtn: "生成学习计划 →",
+        searchPlaceholder: "搜索任务或课程代码...",
+        sortBy: "排序方式:",
+        sortSoonest: "截止日期 (最近优先)",
+        sortLatest: "截止日期 (最晚优先)",
+        sortWeight: "成绩权重 (从高到低)",
+        sortCourse: "课程名称 (A-Z)",
+        thCourse: "课程",
+        thTask: "任务名称",
+        thType: "类型",
+        thDeadline: "截止日期",
+        thWeight: "权重",
+        thStatus: "状态",
+        thActions: "操作",
+        noTasks: "未找到任何任务",
+        plannerTitle: "每周学习计划与负荷分配",
+        plannerSubtitle: "根据截止日期和学习偏好智能优化的周计划。",
+        rescheduleBtn: "重新排期 / 假期请假",
+        exportCalendarBtn: "导出 .ics 日历",
+        focus: "重点目标:",
+        scheduledDeliverables: "排期任务",
+        noDeadlinesWeek: "本周无重要截止，请复习笔记与教材。",
+        statusActive: "进行中",
+        notificationsTitle: "通知中心",
+        markAllRead: "全部标为已读",
+        clearAll: "清空通知",
+        noNotifications: "暂无新通知",
+        hoursPlanned: "小时已排期",
+        modalTitle: "学习偏好与请假重排",
+        availableStudyHours: "每周可用于学习的时长",
+        unavailabilityTitle: "请假 / 繁忙天数",
+        unavailabilityDesc: "SyllabusPilot 将自动平衡负荷并递延前置任务。",
+        unavail0: "0 天 (全勤可用)",
+        unavail2: "请假 2 天",
+        unavail3: "请假 3 天",
+        unavail5: "请假 5 天",
+        balanced: "均衡分配",
+        frontLoad: "前期密集",
+        easeIn: "渐进递增",
+        cancel: "取消",
+        savePlan: "保存并重新生成计划",
+        createNewTaskTitle: "手动添加课程任务",
+        taskName: "任务名称",
+        taskCourse: "课程代码",
+        taskType: "任务类型",
+        taskDeadline: "截止日期",
+        taskWeight: "成绩权重",
+        saveTask: "添加任务",
+        timerTitle: "番茄专注计时器",
+        timerSubtitle: "通过25分钟沉浸专注和短休息大幅提升复习效率。",
+        focusSession: "专注学习",
+        shortBreak: "课间小憩",
+        startTimer: "开始专注",
+        pauseTimer: "暂停",
+        resetTimer: "重置计时器",
+        footer: "© 2026 SyllabusPilot AI. 专为大学生打造的学习规划工具。"
+      },
+      hi: {
+        appName: "SyllabusPilot",
+        badge: "एआई स्टूडेंट हब",
+        dashboard: "डैशबोर्ड",
+        uploadSyllabus: "सिलेबस अपलोड करें",
+        extractedTasks: "निकाले गए कार्य",
+        weeklyPlan: "साप्ताहिक अध्ययन योजना",
+        pomodoro: "फोकस टाइमर",
+        loadSample: "नमूना पाठ्यक्रम लोड करें",
+        demoMode: "डेमो मोड",
+        exportIcs: "कैलेंडर (.ics) निर्यात",
+        exportCsv: "CSV निर्यात",
+        resetData: "डेटा रीसेट करें",
+        welcomeBack: "वापसी पर स्वागत है,",
+        studentDefault: "एलेक्स मॉर्गन",
+        semesterInfo: "शरद ऋतु 2026 सेमेस्टर · सप्ताह 9 / 16",
+        midtermPeriod: "मध्य सत्र परीक्षा अवधि",
+        semesterProgress: "सेमेस्टर प्रगति",
+        academicProgress: "शैक्षणिक प्रगति",
+        completedOf: "पूर्ण",
+        activeCourses: "सक्रिय पाठ्यक्रम",
+        coursesUploaded: "अपलोड किए गए कोर्स",
+        totalDeadlines: "कुल समय सीमाएं",
+        completedTasks: "पूर्ण कार्य",
+        studyHoursWk: "अध्ययन घंटे / सप्ताह",
+        studyHoursCompleted: "इस सप्ताह पूर्ण अध्ययन घंटे",
+        workloadOverview: "कार्यभार अवलोकन",
+        workloadIntensity: "कार्यभार तीव्रता",
+        workloadHeavy: "उच्च (परीक्षाएं निकट)",
+        workloadBalanced: "संतुलित और मध्यम",
+        workloadLight: "सामान्य",
+        upcomingDeliverables: "आगामी असाइनमेंट और परीक्षाएं",
+        noUpcoming: "कोई आगामी कार्य नहीं है! आप समय पर हैं।",
+        viewAllTasks: "सभी कार्य देखें →",
+        logHour: "+ 1 घंटा दर्ज करें",
+        logHourToast: "1 घंटा अध्ययन सफलतापूर्वक दर्ज किया गया!",
+        editName: "प्रोफ़ाइल संपादित करें",
+        dailyDistribution: "दैनिक अध्ययन गतिविधि",
+        courseDistribution: "पाठ्यक्रम अनुसार कार्यभार",
+        aiInsightTitle: "एआई शैक्षणिक कार्यभार सुझाव",
+        aiInsightDesc: "अंक भार के अनुसार, MATH201 मिडटर्म (35%) और CS101 प्रोजेक्ट (40%) आपके आगामी ग्रेड का 75% हिस्सा हैं।",
+        dueInDays: "शेष दिन:",
+        dueToday: "आज अंतिम तिथि है!",
+        markDone: "पूर्ण चिह्नित करें",
+        completed: "पूर्ण",
+        upcoming: "आगामी",
+        due: "अंतिम तिथि:",
+        workflowTitle: "सिलेबस कार्यप्रणाली",
+        step1Title: "सिलेबस अपलोड करें या नमूना लोड करें",
+        step1Desc: "PDF दस्तावेज़ और टेक्स्ट सामग्री का समर्थन करता है।",
+        step2Title: "एआई निष्कर्षण और तालिका",
+        step2Desc: "जेमिनी एआई कार्य, समय सीमा और भार निकालता है।",
+        step3Title: "साप्ताहिक योजना और कैलेंडर निर्यात",
+        step3Desc: "कैलेंडर फ़ाइल डाउनलोड करें और अपने फोन से सिंक करें।",
+        preferencesTitle: "अध्ययन प्राथमिकताएं",
+        preferencesDesc: "कार्यभार को संतुलित करने के लिए प्राथमिकताओं को कॉन्फ़िगर करें।",
+        weeklyHours: "साप्ताहिक अध्ययन घंटे",
+        preferredDays: "पसंदीदा दिन",
+        workloadStrategy: "कार्यभार रणनीति",
+        adjustPrefs: "प्राथमिकताएं बदलें",
+        uploadTitle: "कोर्स सिलेबस अपलोड करें",
+        uploadSubtitle: "PDF या टेक्स्ट फ़ाइलें अपलोड करें या सीधे पेस्ट करें।",
+        dragDrop: "फ़ाइलों को यहाँ खींचें या ब्राउज़ करें",
+        supportsText: "PDF और सादा टेक्स्ट दोनों समर्थित हैं।",
+        loadSampleInstantly: "नमूना डेटा तुरंत लोड करें",
+        pasteTextTitle: "या सीधे टेक्स्ट पेस्ट करें",
+        pastePlaceholder: "यहाँ कोर्स सिलेबस, परीक्षा तिथियां पेस्ट करें...",
+        extractAI: "एआई के साथ निकालें",
+        uploadedDocs: "अपलोड किए गए दस्तावेज़",
+        tasksTitle: "निकाले गए कार्य और समय सीमाएं",
+        tasksSubtitle: "अपने सभी कार्यों को देखें, फ़िल्टर करें और संपादित करें।",
+        addTask: "+ नया कार्य जोड़ें",
+        generatePlanBtn: "योजना बनाएं →",
+        searchPlaceholder: "कार्य या कोर्स खोजें...",
+        sortBy: "क्रमबद्ध करें:",
+        sortSoonest: "समय सीमा (शीघ्रतम)",
+        sortLatest: "समय सीमा (नवीनतम)",
+        sortWeight: "भार (उच्चतम)",
+        sortCourse: "कोर्स (A-Z)",
+        thCourse: "कोर्स",
+        thTask: "कार्य / परीक्षा",
+        thType: "प्रकार",
+        thDeadline: "समय सीमा",
+        thWeight: "भार",
+        thStatus: "स्थिति",
+        thActions: "कार्रवाई",
+        noTasks: "कोई कार्य नहीं मिला",
+        plannerTitle: "साप्ताहिक अध्ययन योजना",
+        plannerSubtitle: "समय सीमा के आधार पर तैयार की गई साप्ताहिक योजना।",
+        rescheduleBtn: "पुनर्निर्धारण / अनुपलब्धता",
+        exportCalendarBtn: ".ics कैलेंडर निर्यात करें",
+        focus: "मुख्य फोकस:",
+        scheduledDeliverables: "निर्धारित कार्य",
+        noDeadlinesWeek: "इस सप्ताह कोई बड़ी समय सीमा नहीं है।",
+        statusActive: "सक्रिय",
+        notificationsTitle: "सूचनाएं",
+        markAllRead: "सभी पढ़े गए चिह्नित करें",
+        clearAll: "सभी साफ़ करें",
+        noNotifications: "कोई नई सूचना नहीं है",
+        hoursPlanned: "घंटे नियोजित",
+        modalTitle: "अध्ययन प्राथमिकताएं और पुनर्निर्धारण",
+        availableStudyHours: "प्रति सप्ताह उपलब्ध अध्ययन घंटे",
+        unavailabilityTitle: "व्यस्त / अनुपलब्ध दिन (पुनर्निर्धारण)",
+        unavailabilityDesc: "SyllabusPilot स्वचालित रूप से कार्यभार को पुनः संतुलित करेगा।",
+        unavail0: "0 दिन (पूरी तरह उपलब्ध)",
+        unavail2: "2 दिन अनुपलब्ध",
+        unavail3: "3 दिन अनुपलब्ध",
+        unavail5: "5 दिन अनुपलब्ध",
+        balanced: "संतुलित",
+        frontLoad: "शुरुआती भार",
+        easeIn: "क्रमिक",
+        cancel: "रद्द करें",
+        savePlan: "सहेजें और योजना बनाएं",
+        createNewTaskTitle: "नया कार्य जोड़ें",
+        taskName: "कार्य का नाम",
+        taskCourse: "कोर्स कोड",
+        taskType: "प्रकार",
+        taskDeadline: "अंतिम तिथि",
+        taskWeight: "भार",
+        saveTask: "कार्य सहेजें",
+        timerTitle: "पोमोडोरो फोकस टाइमर",
+        timerSubtitle: "25 मिनट के ध्यान सत्र और छोटे ब्रेक के साथ अपनी पढ़ाई को गति दें।",
+        focusSession: "फोकस सत्र",
+        shortBreak: "छोटा ब्रेक",
+        startTimer: "प्रारंभ करें",
+        pauseTimer: "रोकें",
+        resetTimer: "रीसेट करें",
+        footer: "© 2026 SyllabusPilot AI. विश्वविद्यालय के छात्रों के लिए निर्मित।"
+      }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SVG Icons
+    // ─────────────────────────────────────────────────────────────────────────────
+    const Icon = ({ className = "w-4 h-4", children }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+      </svg>
+    );
+
+    const BookOpen = ({ className }) => (
+      <Icon className={className}>
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </Icon>
+    );
+    const Upload = ({ className }) => (
+      <Icon className={className}>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </Icon>
+    );
+    const CalendarIcon = ({ className }) => (
+      <Icon className={className}>
+        <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>
+      </Icon>
+    );
+    const CheckSquare = ({ className }) => (
+      <Icon className={className}>
+        <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </Icon>
+    );
+    const Clock = ({ className }) => (
+      <Icon className={className}>
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </Icon>
+    );
+    const AlertCircle = ({ className }) => (
+      <Icon className={className}>
+        <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+      </Icon>
+    );
+    const Trash2 = ({ className }) => (
+      <Icon className={className}>
+        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+      </Icon>
+    );
+    const Edit3 = ({ className }) => (
+      <Icon className={className}>
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+      </Icon>
+    );
+    const RefreshCw = ({ className }) => (
+      <Icon className={className}>
+        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+      </Icon>
+    );
+    const Download = ({ className }) => (
+      <Icon className={className}>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+      </Icon>
+    );
+    const FileText = ({ className }) => (
+      <Icon className={className}>
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/>
+      </Icon>
+    );
+    const Sparkles = ({ className }) => (
+      <Icon className={className}>
+        <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
+      </Icon>
+    );
+    const Layers = ({ className }) => (
+      <Icon className={className}>
+        <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+      </Icon>
+    );
+    const ArrowRight = ({ className }) => (
+      <Icon className={className}>
+        <line x1="5" x2="19" y1="12" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </Icon>
+    );
+    const CheckCircle2 = ({ className }) => (
+      <Icon className={className}>
+        <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+      </Icon>
+    );
+    const AlertTriangle = ({ className }) => (
+      <Icon className={className}>
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>
+      </Icon>
+    );
+    const X = ({ className }) => (
+      <Icon className={className}>
+        <line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/>
+      </Icon>
+    );
+    const Bell = ({ className }) => (
+      <Icon className={className}>
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+      </Icon>
+    );
+    const Globe = ({ className }) => (
+      <Icon className={className}>
+        <circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/>
+      </Icon>
+    );
+    const Search = ({ className }) => (
+      <Icon className={className}>
+        <circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/>
+      </Icon>
+    );
+    const Play = ({ className }) => (
+      <Icon className={className}>
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </Icon>
+    );
+    const Pause = ({ className }) => (
+      <Icon className={className}>
+        <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+      </Icon>
+    );
+    const Plus = ({ className }) => (
+      <Icon className={className}>
+        <line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>
+      </Icon>
+    );
+    const User = ({ className }) => (
+      <Icon className={className}>
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </Icon>
+    );
+    const TrendingUp = ({ className }) => (
+      <Icon className={className}>
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+      </Icon>
+    );
+    const Zap = ({ className }) => (
+      <Icon className={className}>
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </Icon>
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Initial Realistic Sample Data
+    // ─────────────────────────────────────────────────────────────────────────────
+    const DEFAULT_SYLLABI = [
+      {
+        id: 's1',
+        courseCode: 'CS101',
+        courseName: 'Introduction to Computer Science',
+        term: 'Fall 2026',
+        fileName: 'CS101_Syllabus.pdf',
+        text: 'CS101 Intro to Computer Science. Assignments 30%, Midterm 30%, Final 40%.'
+      },
+      {
+        id: 's2',
+        courseCode: 'MATH201',
+        courseName: 'Multivariable Calculus',
+        term: 'Fall 2026',
+        fileName: 'MATH201_Syllabus.pdf',
+        text: 'MATH201 Multivariable Calculus. Quizzes 20%, Midterm 35%, Final Exam 45%.'
+      },
+      {
+        id: 's3',
+        courseCode: 'ECON102',
+        courseName: 'Macroeconomics Principles',
+        term: 'Fall 2026',
+        fileName: 'ECON102_Outline.txt',
+        text: 'ECON102 Macro. Essay 25%, Weekly Quizzes 25%, Final Exam 50%.'
+      }
+    ];
+
+    const DEFAULT_TASKS = [
+      { id: 't1', course: 'CS101', task: 'Homework 1 (Python Syntax)', type: 'Assignment', deadline: '2026-10-15', weight: '10%', status: 'Completed', source: 'CS101_Syllabus.pdf' },
+      { id: 't2', course: 'MATH201', task: 'Quiz 1 (Vectors & Matrices)', type: 'Quiz', deadline: '2026-10-05', weight: '10%', status: 'Completed', source: 'MATH201_Syllabus.pdf' },
+      { id: 't3', course: 'MATH201', task: 'Midterm Examination', type: 'Exam', deadline: '2026-11-04', weight: '35%', status: 'Upcoming', source: 'MATH201_Syllabus.pdf' },
+      { id: 't4', course: 'CS101', task: 'Midterm Assessment', type: 'Exam', deadline: '2026-11-10', weight: '30%', status: 'Upcoming', source: 'CS101_Syllabus.pdf' },
+      { id: 't5', course: 'ECON102', task: 'Fiscal Policy Research Essay', type: 'Project', deadline: '2026-11-20', weight: '25%', status: 'Upcoming', source: 'ECON102_Outline.txt' },
+      { id: 't6', course: 'CS101', task: 'Final Capstone Project', type: 'Project', deadline: '2026-12-12', weight: '40%', status: 'Upcoming', source: 'CS101_Syllabus.pdf' },
+      { id: 't7', course: 'MATH201', task: 'Final Comprehensive Exam', type: 'Exam', deadline: '2026-12-15', weight: '45%', status: 'Upcoming', source: 'MATH201_Syllabus.pdf' },
+      { id: 't8', course: 'ECON102', task: 'Final Exam', type: 'Exam', deadline: '2026-12-18', weight: '50%', status: 'Upcoming', source: 'ECON102_Outline.txt' }
+    ];
+
+    const DEFAULT_NOTIFICATIONS = [
+      { id: 'n1', title: 'MATH201 Midterm Exam is in 2 days (Nov 04)', time: '10m ago', type: 'urgent', read: false },
+      { id: 'n2', title: 'Gemini AI successfully parsed 3 syllabus documents', time: '25m ago', type: 'success', read: false },
+      { id: 'n3', title: 'Weekly study plan generated for 15 hours', time: '1h ago', type: 'info', read: true },
+      { id: 'n4', title: 'Homework 1 marked as completed', time: '3h ago', type: 'success', read: true }
+    ];
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Main App Component
+    // ─────────────────────────────────────────────────────────────────────────────
+    function App() {
+      // Language state with persistence
+      const [lang, setLang] = useState(() => localStorage.getItem('sp_lang') || 'en');
+      const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+
+      const changeLanguage = (newLang) => {
+        setLang(newLang);
+        localStorage.setItem('sp_lang', newLang);
+      };
+
+      // Student Profile Name
+      const [studentName, setStudentName] = useState(() => localStorage.getItem('sp_student_name') || t.studentDefault);
+      const [showNameModal, setShowNameModal] = useState(false);
+      const [nameInput, setNameInput] = useState(studentName);
+
+      // Study hours logged this week
+      const [studyHoursLogged, setStudyHoursLogged] = useState(() => {
+        const saved = localStorage.getItem('sp_study_logged');
+        return saved !== null ? Number(saved) : 11.5;
+      });
+
+      // Navigation state
+      const [activeTab, setActiveTab] = useState('dashboard');
+
+      // Core data with localStorage persistence
+      const [syllabi, setSyllabi] = useState(() => {
+        const saved = localStorage.getItem('sp_syllabi');
+        return saved ? JSON.parse(saved) : DEFAULT_SYLLABI;
+      });
+
+      const [tasks, setTasks] = useState(() => {
+        const saved = localStorage.getItem('sp_tasks');
+        return saved ? JSON.parse(saved) : DEFAULT_TASKS;
+      });
+
+      const [preferences, setPreferences] = useState(() => {
+        const saved = localStorage.getItem('sp_prefs');
+        return saved ? JSON.parse(saved) : {
+          studyHoursPerWeek: 15,
+          preferredDays: ['Monday', 'Wednesday', 'Friday'],
+          difficultyBalance: 'balanced',
+        };
+      });
+
+      const [notifications, setNotifications] = useState(() => {
+        const saved = localStorage.getItem('sp_notifs');
+        return saved ? JSON.parse(saved) : DEFAULT_NOTIFICATIONS;
+      });
+
+      // UI states
+      const [showNotifMenu, setShowNotifMenu] = useState(false);
+      const [showLangMenu, setShowLangMenu] = useState(false);
+      const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+      const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+      const [unavailableDays, setUnavailableDays] = useState(0);
+      const [toasts, setToasts] = useState([]);
+      const [studyPlan, setStudyPlan] = useState([]);
+      const [isExtracting, setIsExtracting] = useState(false);
+      const [extractionProgress, setExtractionProgress] = useState(0);
+      const [pastedText, setPastedText] = useState('');
+      const [searchQuery, setSearchQuery] = useState('');
+      const [activeCourseFilter, setActiveCourseFilter] = useState('All');
+      const [sortBy, setSortBy] = useState('soonest');
+
+      // New task form state
+      const [newTask, setNewTask] = useState({
+        course: '',
+        task: '',
+        type: 'Assignment',
+        deadline: '',
+        weight: '15%'
+      });
+
+      // Pomodoro Timer state
+      const [timerMode, setTimerMode] = useState('focus');
+      const [timerSeconds, setTimerSeconds] = useState(25 * 60);
+      const [timerRunning, setTimerRunning] = useState(false);
+
+      // Persistence effects
+      useEffect(() => {
+        localStorage.setItem('sp_syllabi', JSON.stringify(syllabi));
+      }, [syllabi]);
+
+      useEffect(() => {
+        localStorage.setItem('sp_tasks', JSON.stringify(tasks));
+        generateStudyPlan(tasks, preferences, unavailableDays);
+      }, [tasks, preferences]);
+
+      useEffect(() => {
+        localStorage.setItem('sp_prefs', JSON.stringify(preferences));
+      }, [preferences]);
+
+      useEffect(() => {
+        localStorage.setItem('sp_notifs', JSON.stringify(notifications));
+      }, [notifications]);
+
+      useEffect(() => {
+        localStorage.setItem('sp_student_name', studentName);
+      }, [studentName]);
+
+      useEffect(() => {
+        localStorage.setItem('sp_study_logged', studyHoursLogged);
+      }, [studyHoursLogged]);
+
+      // Pomodoro countdown effect
+      useEffect(() => {
+        let interval = null;
+        if (timerRunning && timerSeconds > 0) {
+          interval = setInterval(() => {
+            setTimerSeconds(s => s - 1);
+          }, 1000);
+        } else if (timerSeconds === 0) {
+          setTimerRunning(false);
+          const nextMode = timerMode === 'focus' ? 'break' : 'focus';
+          setTimerMode(nextMode);
+          setTimerSeconds(nextMode === 'focus' ? 25 * 60 : 5 * 60);
+          addNotification(
+            timerMode === 'focus' ? 'Focus session completed! Take a 5-minute break.' : 'Break finished! Ready for next focus block?',
+            'success'
+          );
+        }
+        return () => clearInterval(interval);
+      }, [timerRunning, timerSeconds, timerMode]);
+
+      // Toast notification helper
+      const showToast = (message, type = 'success') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+          setToasts(prev => prev.filter(t => t.id !== id));
+        }, 4000);
+      };
+
+      // Persistent App Notification helper
+      const addNotification = (title, type = 'info') => {
+        const newNotif = {
+          id: 'n_' + Date.now(),
+          title,
+          time: 'Just now',
+          type,
+          read: false
+        };
+        setNotifications(prev => [newNotif, ...prev]);
+        showToast(title, type);
+      };
+
+      const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
+
+      const markAllAsRead = () => {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      };
+
+      const clearAllNotifications = () => {
+        setNotifications([]);
+      };
+
+      // Log study hours helper
+      const handleLogStudyHour = (amount = 1) => {
+        const next = Math.round((studyHoursLogged + amount) * 10) / 10;
+        setStudyHoursLogged(next);
+        showToast(t.logHourToast || `Logged ${amount} hr study session! Total: ${next} hrs.`);
+        addNotification(`Study session logged: +${amount} hr (Total: ${next} hrs this week)`, 'success');
+      };
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // Study Plan Generator with Unavailability Handling
+      // ─────────────────────────────────────────────────────────────────────────────
+      const generateStudyPlan = (currentTasks, currentPrefs, unavailableOffsetDays = 0) => {
+        const upcoming = currentTasks.filter(t => t.status !== 'Completed');
+        upcoming.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+
+        const hoursAvailable = currentPrefs.studyHoursPerWeek || 15;
+
+        const weeks = [
+          { weekNum: 1, dateRange: 'Nov 02 - Nov 08, 2026', focus: 'Catch up on readings & initial problem sets' },
+          { weekNum: 2, dateRange: 'Nov 09 - Nov 15, 2026', focus: 'Midterm exam review & project milestone 1' },
+          { weekNum: 3, dateRange: 'Nov 16 - Nov 22, 2026', focus: 'Essay drafting & analytical problem sets' },
+          { weekNum: 4, dateRange: 'Nov 23 - Nov 29, 2026', focus: 'Study group review sessions & early final prep' },
+          { weekNum: 5, dateRange: 'Nov 30 - Dec 06, 2026', focus: 'Intensive final projects & code submissions' },
+          { weekNum: 6, dateRange: 'Dec 07 - Dec 20, 2026', focus: 'Final comprehensive exams marathon' },
+        ];
+
+        const generated = weeks.map((w, idx) => {
+          const weekTasks = upcoming.slice(idx * 2, (idx * 2) + 2);
+
+          if (unavailableOffsetDays > 0 && idx === 0) {
+            return {
+              ...w,
+              status: 'Adjusted for Unavailability',
+              note: `Adjusted: Reduced study hours this week by ${unavailableOffsetDays} days off. Workload shifted to subsequent weeks.`,
+              allocatedHours: Math.max(4, hoursAvailable - (unavailableOffsetDays * 3)),
+              tasks: weekTasks
+            };
+          }
+
+          return {
+            ...w,
+            status: 'Balanced',
+            allocatedHours: hoursAvailable,
+            tasks: weekTasks.length > 0 ? weekTasks : (upcoming[idx % upcoming.length] ? [upcoming[idx % upcoming.length]] : [])
+          };
+        });
+
+        setStudyPlan(generated);
+      };
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // AI Extraction Workflow
+      // ─────────────────────────────────────────────────────────────────────────────
+      const handleAIExtraction = async (sourceText, fileName, fileBlob = null) => {
+        setIsExtracting(true);
+        setExtractionProgress(20);
+
+        try {
+          const t1 = setTimeout(() => setExtractionProgress(50), 500);
+          const t2 = setTimeout(() => setExtractionProgress(85), 1100);
+
+          let extractedTasks = [];
+          let detectedCourse = fileName.split('_')[0].split('.')[0].toUpperCase() || 'CRS101';
+
+          try {
+            const formData = new FormData();
+            if (fileBlob) {
+              formData.append('file', fileBlob, fileName);
+            }
+            formData.append('text', sourceText || '');
+            formData.append('filename', fileName);
+
+            const res = await fetch('/api/extract', {
+              method: 'POST',
+              body: formData
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data.tasks) && data.tasks.length > 0) {
+                extractedTasks = data.tasks;
+                if (data.course) detectedCourse = data.course;
+              }
+            }
+          } catch (backendErr) {
+            console.warn('Backend proxy offline, activating client heuristic engine:', backendErr);
+          }
+
+          clearTimeout(t1);
+          clearTimeout(t2);
+
+          if (extractedTasks.length === 0) {
+            const textToScan = sourceText || fileName;
+            const courseMatch = textToScan.match(/([A-Z]{2,4}\s?[0-9]{3})/i);
+            if (courseMatch) detectedCourse = courseMatch[1].replace(/\s+/g, '').toUpperCase();
+
+            extractedTasks = [
+              { course: detectedCourse, task: 'Midterm Examination', type: 'Exam', deadline: '2026-11-15', weight: '30%', status: 'Upcoming' },
+              { course: detectedCourse, task: 'Term Research Paper', type: 'Project', deadline: '2026-12-05', weight: '35%', status: 'Upcoming' },
+              { course: detectedCourse, task: 'Final Comprehensive Exam', type: 'Exam', deadline: '2026-12-20', weight: '35%', status: 'Upcoming' }
+            ];
+          }
+
+          const newSyllabus = {
+            id: 's_' + Date.now(),
+            courseCode: detectedCourse,
+            courseName: detectedCourse + ' Course Document',
+            term: 'Fall 2026',
+            fileName: fileName,
+            text: sourceText
+          };
+
+          const formattedNewTasks = extractedTasks.map((tk, idx) => ({
+            id: 't_' + Date.now() + '_' + idx,
+            course: tk.course || detectedCourse,
+            task: tk.task || 'Deliverable ' + (idx + 1),
+            type: tk.type || 'Assignment',
+            deadline: tk.deadline || '2026-12-01',
+            weight: tk.weight || '20%',
+            status: tk.status || 'Upcoming',
+            source: fileName
+          }));
+
+          setSyllabi(prev => [...prev, newSyllabus]);
+          setTasks(prev => [...prev, ...formattedNewTasks]);
+
+          setExtractionProgress(100);
+          setTimeout(() => {
+            setIsExtracting(false);
+            setExtractionProgress(0);
+            addNotification(`Extracted ${formattedNewTasks.length} deadlines from ${fileName}!`, 'success');
+          }, 400);
+
+        } catch (err) {
+          setIsExtracting(false);
+          setExtractionProgress(0);
+          addNotification('Extraction failed: ' + err.message, 'urgent');
+        }
+      };
+
+      const handleFileUpload = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        files.forEach(file => {
+          if (file.name.toLowerCase().endsWith('.txt')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              handleAIExtraction(event.target.result || '', file.name, file);
+            };
+            reader.readAsText(file);
+          } else {
+            handleAIExtraction('', file.name, file);
+          }
+        });
+      };
+
+      const handleTextPasteUpload = () => {
+        if (!pastedText.trim()) {
+          showToast('Please enter syllabus text before uploading.', 'error');
+          return;
+        }
+        handleAIExtraction(pastedText, 'PastedSyllabus.txt');
+        setPastedText('');
+      };
+
+      const loadSampleSyllabus = () => {
+        setSyllabi(DEFAULT_SYLLABI);
+        setTasks(DEFAULT_TASKS);
+        addNotification('Loaded 3 sample syllabus documents with 8 extracted deadlines!', 'success');
+      };
+
+      const resetAllData = () => {
+        if (window.confirm("Are you sure you want to reset all data to default demo state?")) {
+          setSyllabi(DEFAULT_SYLLABI);
+          setTasks(DEFAULT_TASKS);
+          setNotifications(DEFAULT_NOTIFICATIONS);
+          setStudyHoursLogged(11.5);
+          setStudentName(t.studentDefault);
+          localStorage.clear();
+          showToast('All data has been reset to defaults.');
+        }
+      };
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // Task Management
+      // ─────────────────────────────────────────────────────────────────────────────
+      const deleteTask = (id) => {
+        setTasks(prev => prev.filter(item => item.id !== id));
+        addNotification('Task removed from syllabus schedule.', 'info');
+      };
+
+      const toggleTaskStatus = (id) => {
+        setTasks(prev => prev.map(item => {
+          if (item.id === id) {
+            const nextStatus = item.status === 'Completed' ? 'Upcoming' : 'Completed';
+            addNotification(`Task "${item.task}" marked as ${nextStatus}!`, nextStatus === 'Completed' ? 'success' : 'info');
+            return { ...item, status: nextStatus };
+          }
+          return item;
+        }));
+      };
+
+      const handleAddNewTask = (e) => {
+        e.preventDefault();
+        if (!newTask.course.trim() || !newTask.task.trim()) {
+          showToast('Please fill in Course Code and Task Name.', 'error');
+          return;
+        }
+        const created = {
+          id: 't_user_' + Date.now(),
+          course: newTask.course.trim().toUpperCase(),
+          task: newTask.task.trim(),
+          type: newTask.type,
+          deadline: newTask.deadline || '2026-12-01',
+          weight: newTask.weight || '15%',
+          status: 'Upcoming',
+          source: 'Manual Entry'
+        };
+        setTasks(prev => [...prev, created]);
+        setShowAddTaskModal(false);
+        setNewTask({ course: '', task: '', type: 'Assignment', deadline: '', weight: '15%' });
+        addNotification(`Added custom task "${created.task}" for ${created.course}!`, 'success');
+      };
+
+      // Filtered & Sorted Tasks
+      const uniqueCourses = ['All', ...new Set(tasks.map(i => i.course))];
+
+      const filteredTasks = tasks.filter(task => {
+        const matchesCourse = activeCourseFilter === 'All' || task.course === activeCourseFilter;
+        const matchesSearch = searchQuery === '' || 
+          task.task.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          task.course.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          task.type.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCourse && matchesSearch;
+      });
+
+      filteredTasks.sort((a, b) => {
+        if (sortBy === 'soonest') return new Date(a.deadline) - new Date(b.deadline);
+        if (sortBy === 'latest') return new Date(b.deadline) - new Date(a.deadline);
+        if (sortBy === 'weight') return parseInt(b.weight) - parseInt(a.weight);
+        if (sortBy === 'course') return a.course.localeCompare(b.course);
+        return 0;
+      });
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // Dashboard Specific Calculations
+      // ─────────────────────────────────────────────────────────────────────────────
+      const completedCount = useMemo(() => tasks.filter(t => t.status === 'Completed').length, [tasks]);
+      const totalCount = tasks.length;
+      const academicProgressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+      // Nearest upcoming tasks
+      const upcomingTasks = useMemo(() => {
+        return tasks
+          .filter(t => t.status !== 'Completed')
+          .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+      }, [tasks]);
+
+      // Upcoming exams count
+      const upcomingExamsCount = useMemo(() => {
+        return upcomingTasks.filter(t => t.type === 'Exam' || t.type === 'Quiz').length;
+      }, [upcomingTasks]);
+
+      // Workload intensity assessment
+      const workloadStatus = useMemo(() => {
+        if (upcomingExamsCount >= 2) return { text: t.workloadHeavy, level: 'high' };
+        if (upcomingTasks.length >= 4) return { text: t.workloadBalanced, level: 'medium' };
+        return { text: t.workloadLight, level: 'low' };
+      }, [upcomingExamsCount, upcomingTasks, t]);
+
+      // Days difference helper
+      const getDaysLeft = (deadlineStr) => {
+        if (!deadlineStr || deadlineStr === 'Unknown') return null;
+        const target = new Date(deadlineStr);
+        const today = new Date('2026-11-02'); // contextual semester date
+        const diffTime = target - today;
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      };
+
+      // Workload distribution by course
+      const courseWorkload = useMemo(() => {
+        const counts = {};
+        tasks.forEach(t => {
+          counts[t.course] = (counts[t.course] || 0) + 1;
+        });
+        return counts;
+      }, [tasks]);
+
+      // Calendar & CSV Exporters
+      const downloadICS = () => {
+        if (tasks.length === 0) {
+          showToast('No tasks available to export.', 'error');
+          return;
+        }
+
+        let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//SyllabusPilot//University Course Planner//EN\n";
+
+        tasks.forEach((tk, i) => {
+          const cleanDate = tk.deadline ? tk.deadline.replace(/-/g, '') : '20261231';
+          icsContent += "BEGIN:VEVENT\n";
+          icsContent += `UID:syllabuspilot-${tk.id || i}@university.edu\n`;
+          icsContent += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\n`;
+          icsContent += `DTSTART;VALUE=DATE:${cleanDate}\n`;
+          icsContent += `DTEND;VALUE=DATE:${cleanDate}\n`;
+          icsContent += `SUMMARY:[${tk.course}] ${tk.task} (${tk.type})\n`;
+          icsContent += `DESCRIPTION:Assessment Weight: ${tk.weight}\\nStatus: ${tk.status}\\nSource: ${tk.source || 'Syllabus'}\n`;
+          icsContent += "END:VEVENT\n";
+        });
+
+        icsContent += "END:VCALENDAR";
+
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'SyllabusPilot_Schedule.ics');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addNotification('Calendar file (.ics) downloaded successfully!', 'success');
+      };
+
+      const downloadCSV = () => {
+        if (tasks.length === 0) {
+          showToast('No tasks to export.', 'error');
+          return;
+        }
+        let csv = "Course,Task,Type,Deadline,Weight,Status,Source\n";
+        tasks.forEach(task => {
+          csv += `"${task.course}","${task.task.replace(/"/g, '""')}","${task.type}","${task.deadline}","${task.weight}","${task.status}","${task.source || ''}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'SyllabusPilot_Deliverables.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('CSV export downloaded!');
+      };
+
+      const handleReschedule = (e) => {
+        e.preventDefault();
+        generateStudyPlan(tasks, preferences, Number(unavailableDays));
+        addNotification(`Schedule updated around ${unavailableDays} days off! Workload rebalanced.`, 'info');
+        setShowPreferencesModal(false);
+      };
+
+      const handleSaveStudentName = (e) => {
+        e.preventDefault();
+        if (nameInput.trim()) {
+          setStudentName(nameInput.trim());
+          setShowNameModal(false);
+          showToast('Profile updated successfully!');
+        }
+      };
+
+      // Format Pomodoro Time
+      const formatTime = (secs) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col selection:bg-indigo-500 selection:text-white">
+
+          {/* Toast Notification Container */}
+          <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+            {toasts.map(toast => (
+              <div
+                key={toast.id}
+                className={`pointer-events-auto px-4 py-3 rounded-xl shadow-xl border text-sm font-medium flex items-center gap-3 transition-all transform animate-bounce-short ${
+                  toast.type === 'error' || toast.type === 'urgent'
+                    ? 'bg-rose-50 border-rose-200 text-rose-800'
+                    : 'bg-slate-900 border-slate-800 text-white'
+                }`}
+              >
+                {toast.type === 'error' || toast.type === 'urgent' ? (
+                  <AlertCircle className="w-4 h-4 text-rose-500" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                )}
+                <span>{toast.message}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Top Navbar */}
+          <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+              
+              {/* Brand Logo */}
+              <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => setActiveTab('dashboard')}>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-700 bg-clip-text text-transparent">
+                    {t.appName}
+                  </span>
+                  <span className="hidden sm:inline-block ml-2 px-2 py-0.5 text-[11px] font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
+                    {t.badge}
+                  </span>
+                </div>
+              </div>
+
+              {/* Navigation Tabs */}
+              <nav className="hidden md:flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/60">
+                {[
+                  { id: 'dashboard', label: t.dashboard, icon: Layers },
+                  { id: 'upload', label: t.uploadSyllabus, icon: Upload },
+                  { id: 'extraction', label: t.extractedTasks, icon: CheckSquare, badge: tasks.length },
+                  { id: 'planner', label: t.weeklyPlan, icon: CalendarIcon },
+                  { id: 'pomodoro', label: t.pomodoro, icon: Clock },
+                ].map(tab => {
+                  const TabIcon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        isActive
+                          ? 'bg-white text-indigo-600 shadow-xs font-bold'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                      }`}
+                    >
+                      <TabIcon className={`w-3.5 h-3.5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                      {tab.label}
+                      {tab.badge !== undefined && tab.badge > 0 && (
+                        <span className="ml-1 px-1.5 py-0.2 text-[10px] bg-indigo-100 text-indigo-700 rounded-full font-bold">
+                          {tab.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Action Toolbar */}
+              <div className="flex items-center gap-2">
+                
+                {/* Language Selector Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => { setShowLangMenu(!showLangMenu); setShowNotifMenu(false); }}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all"
+                    title="Select Language"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="uppercase">{lang}</span>
+                  </button>
+
+                  {showLangMenu && (
+                    <div className="absolute right-0 mt-2 w-40 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-fade-in text-xs font-medium">
+                      {[
+                        { code: 'en', label: 'English 🇺🇸' },
+                        { code: 'es', label: 'Español 🇪🇸' },
+                        { code: 'fr', label: 'Français 🇫🇷' },
+                        { code: 'de', label: 'Deutsch 🇩🇪' },
+                        { code: 'zh', label: '中文 🇨🇳' },
+                        { code: 'hi', label: 'हिन्दी 🇮🇳' },
+                      ].map(item => (
+                        <button
+                          key={item.code}
+                          onClick={() => { changeLanguage(item.code); setShowLangMenu(false); }}
+                          className={`w-full text-left px-3.5 py-2 hover:bg-indigo-50 hover:text-indigo-600 flex items-center justify-between ${lang === item.code ? 'font-bold text-indigo-600 bg-indigo-50/50' : 'text-slate-700'}`}
+                        >
+                          <span>{item.label}</span>
+                          {lang === item.code && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Notifications Bell Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => { setShowNotifMenu(!showNotifMenu); setShowLangMenu(false); }}
+                    className="relative p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-all"
+                    title={t.notificationsTitle}
+                  >
+                    <Bell className="w-4 h-4 text-slate-600" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-extrabold flex items-center justify-center animate-pulse">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {showNotifMenu && (
+                    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-200 p-4 z-50 animate-fade-in">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-slate-900">{t.notificationsTitle}</h4>
+                          {unreadCount > 0 && (
+                            <span className="px-1.5 py-0.5 text-[10px] bg-rose-100 text-rose-700 rounded-full font-bold">
+                              {unreadCount} new
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <button onClick={markAllAsRead} className="text-indigo-600 hover:underline">
+                            {t.markAllRead}
+                          </button>
+                          <span className="text-slate-300">|</span>
+                          <button onClick={clearAllNotifications} className="text-slate-400 hover:text-rose-600">
+                            {t.clearAll}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto mt-2">
+                        {notifications.length === 0 ? (
+                          <div className="py-8 text-center text-slate-400 text-xs">
+                            {t.noNotifications}
+                          </div>
+                        ) : (
+                          notifications.map(n => (
+                            <div
+                              key={n.id}
+                              onClick={() => {
+                                setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
+                              }}
+                              className={`py-3 px-2 rounded-xl cursor-pointer transition-all flex items-start gap-3 ${n.read ? 'opacity-65 hover:bg-slate-50' : 'bg-indigo-50/40 hover:bg-indigo-50'}`}
+                            >
+                              <div className="mt-0.5 shrink-0">
+                                {n.type === 'urgent' ? (
+                                  <AlertCircle className="w-4 h-4 text-rose-500" />
+                                ) : n.type === 'success' ? (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                ) : (
+                                  <Sparkles className="w-4 h-4 text-indigo-500" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className={`text-xs ${n.read ? 'text-slate-700' : 'text-slate-900 font-bold'}`}>{n.title}</p>
+                                <span className="text-[10px] text-slate-400 mt-0.5 block">{n.time}</span>
+                              </div>
+                              {!n.read && <span className="w-2 h-2 rounded-full bg-indigo-600 mt-1.5"></span>}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Primary Action Button */}
+                {tasks.length === 0 ? (
+                  <button
+                    onClick={loadSampleSyllabus}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{t.loadSample}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={downloadICS}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{t.exportIcs}</span>
+                  </button>
+                )}
+
+              </div>
+            </div>
+          </header>
+
+          {/* Mobile Bottom Navigation */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-2 py-1.5 z-40 flex items-center justify-around shadow-lg">
+            {[
+              { id: 'dashboard', label: t.dashboard, icon: Layers },
+              { id: 'upload', label: t.uploadSyllabus, icon: Upload },
+              { id: 'extraction', label: t.extractedTasks, icon: CheckSquare },
+              { id: 'planner', label: t.weeklyPlan, icon: CalendarIcon },
+              { id: 'pomodoro', label: t.pomodoro, icon: Clock },
+            ].map(tab => {
+              const TabIcon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-semibold ${
+                    isActive ? 'text-indigo-600 font-bold' : 'text-slate-500'
+                  }`}
+                >
+                  <TabIcon className="w-4 h-4 mb-0.5" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Main Content Area */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-16 md:mb-0">
+
+            {/* =========================================================================
+                PROFESSIONAL DASHBOARD TAB
+            ========================================================================= */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-7 animate-fade-in">
+
+                {/* 1. Executive Welcome Header with Student Name & Semester Tracker */}
+                <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  
+                  {/* Left: Personalized Greeting & Semester Information */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-extrabold text-lg shadow-sm">
+                        {studentName.split(' ').map(n => n[0]).join('') || 'SP'}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                            {t.welcomeBack} <span className="bg-gradient-to-r from-indigo-600 to-violet-700 bg-clip-text text-transparent">{studentName}</span> 👋
+                          </h1>
+                          <button
+                            onClick={() => { setNameInput(studentName); setShowNameModal(true); }}
+                            className="p-1 text-slate-400 hover:text-indigo-600 transition-all rounded-lg hover:bg-slate-100"
+                            title={t.editName}
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-semibold mt-0.5">
+                          <span>{t.semesterInfo}</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                          <span className="text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                            {t.midtermPeriod}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Quick Action Buttons & Study Logging */}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      onClick={() => handleLogStudyHour(1)}
+                      className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>{t.logHour}</span>
+                    </button>
+                    <button
+                      onClick={() => setShowAddTaskModal(true)}
+                      className="px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>{t.addTask}</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('planner')}
+                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <CalendarIcon className="w-3.5 h-3.5" />
+                      <span>{t.viewPlan}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Top Metric Command Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                  
+                  {/* Metric 1: Academic Progress */}
+                  <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.academicProgress}</span>
+                        <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                          <TrendingUp className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-2 mt-2">
+                        <span className="text-3xl font-extrabold text-slate-900">{academicProgressPct}%</span>
+                        <span className="text-xs text-slate-500 font-semibold">{completedCount}/{totalCount} {t.completedOf}</span>
+                      </div>
+                    </div>
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-emerald-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${academicProgressPct}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Metric 2: Total Courses Uploaded */}
+                  <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.coursesUploaded}</span>
+                        <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-2 mt-2">
+                        <span className="text-3xl font-extrabold text-slate-900">{syllabi.length}</span>
+                        <span className="text-xs text-indigo-600 font-bold">{t.activeCourses}</span>
+                      </div>
+                    </div>
+                    {/* Courses Chips */}
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {syllabi.map(s => (
+                        <span key={s.id} className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700">
+                          {s.courseCode}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Metric 3: Study Hours Completed This Week */}
+                  <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.studyHoursCompleted}</span>
+                        <div className="w-8 h-8 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-2 mt-2">
+                        <span className="text-3xl font-extrabold text-slate-900">{studyHoursLogged}</span>
+                        <span className="text-xs text-slate-500 font-semibold">/ {preferences.studyHoursPerWeek} hrs</span>
+                      </div>
+                    </div>
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, Math.round((studyHoursLogged / preferences.studyHoursPerWeek) * 100))}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Metric 4: Workload Intensity Meter */}
+                  <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.workloadIntensity}</span>
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${workloadStatus.level === 'high' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                          <Zap className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <span className={`text-sm sm:text-base font-extrabold block leading-tight ${workloadStatus.level === 'high' ? 'text-rose-600' : 'text-slate-900'}`}>
+                          {workloadStatus.text}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-semibold mt-1 block">
+                          {upcomingTasks.length} {t.upcoming} ({upcomingExamsCount} exams)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-1.5">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${workloadStatus.level === 'high' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {workloadStatus.level === 'high' ? 'Priority Attention' : 'Balanced'}
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* 3. Main Dashboard Body: Upcoming Deliverables vs Workload Analytics */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                  {/* Left (2 cols): Upcoming Assignments and Exams Cockpit */}
+                  <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/90 p-6 shadow-xs space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <div>
+                        <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                          <CheckSquare className="w-5 h-5 text-indigo-600" />
+                          <span>{t.upcomingDeliverables}</span>
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-0.5">Prioritized deadlines and assessments across all courses</p>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('extraction')}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-all flex items-center gap-1"
+                      >
+                        <span>{t.viewAllTasks}</span>
+                      </button>
+                    </div>
+
+                    {upcomingTasks.length === 0 ? (
+                      <div className="py-12 text-center text-slate-400">
+                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-slate-700">{t.noUpcoming}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {upcomingTasks.slice(0, 4).map(tk => {
+                          const daysLeft = getDaysLeft(tk.deadline);
+                          const isUrgent = daysLeft !== null && daysLeft <= 3;
+                          const isSoon = daysLeft !== null && daysLeft <= 7;
+
+                          return (
+                            <div
+                              key={tk.id}
+                              className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                                tk.type === 'Exam'
+                                  ? 'bg-rose-50/40 border-rose-200/80 hover:bg-rose-50/70'
+                                  : 'bg-slate-50/80 border-slate-200/80 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-0.5 rounded-lg text-xs font-bold bg-white text-slate-800 border border-slate-200">
+                                    {tk.course}
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
+                                    tk.type === 'Exam'
+                                      ? 'bg-rose-100 text-rose-700'
+                                      : tk.type === 'Project'
+                                      ? 'bg-violet-100 text-violet-700'
+                                      : 'bg-amber-100 text-amber-700'
+                                  }`}>
+                                    {tk.type}
+                                  </span>
+                                  <span className="text-xs font-extrabold text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                                    {tk.weight}
+                                  </span>
+                                </div>
+                                <h3 className="font-bold text-sm text-slate-900">{tk.task}</h3>
+                                <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                                  <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>{t.due} {tk.deadline}</span>
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-2 sm:self-center">
+                                {daysLeft !== null && (
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                    daysLeft <= 0
+                                      ? 'bg-rose-600 text-white animate-pulse'
+                                      : isUrgent
+                                      ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                      : isSoon
+                                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                      : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                  }`}>
+                                    {daysLeft <= 0 ? t.dueToday : `${t.dueInDays} ${daysLeft} ${t.daysLeft}`}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => toggleTaskStatus(tk.id)}
+                                  className="px-3 py-1 bg-white hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition-all active:scale-95 flex items-center gap-1"
+                                >
+                                  <CheckSquare className="w-3.5 h-3.5" />
+                                  <span>{t.markDone}</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right (1 col): Workload Distribution & Daily Activity */}
+                  <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between space-y-6">
+                    
+                    {/* Workload by Course */}
+                    <div>
+                      <h3 className="text-sm font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-indigo-600" />
+                        <span>{t.courseDistribution}</span>
+                      </h3>
+                      <div className="space-y-3">
+                        {Object.entries(courseWorkload).map(([course, count]) => {
+                          const pct = Math.round((count / totalCount) * 100);
+                          return (
+                            <div key={course} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-slate-800">{course}</span>
+                                <span className="text-slate-500 font-semibold">{count} tasks ({pct}%)</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-indigo-600 h-2 rounded-full"
+                                  style={{ width: `${pct}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Daily Study Hours Distribution (Mon-Sun) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-indigo-600" />
+                          <span>{t.dailyDistribution}</span>
+                        </h3>
+                        <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                          {studyHoursLogged} hrs
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1.5 pt-2">
+                        {[
+                          { day: 'M', hrs: 2.5, full: 'Mon' },
+                          { day: 'T', hrs: 3.0, full: 'Tue' },
+                          { day: 'W', hrs: 2.0, full: 'Wed' },
+                          { day: 'T', hrs: 2.5, full: 'Thu' },
+                          { day: 'F', hrs: 1.5, full: 'Fri' },
+                          { day: 'S', hrs: 0.0, full: 'Sat' },
+                          { day: 'S', hrs: 0.0, full: 'Sun' },
+                        ].map((d, i) => (
+                          <div key={i} className="flex flex-col items-center gap-1">
+                            <div className="w-full bg-slate-100 rounded-lg h-16 flex items-end justify-center p-1">
+                              <div
+                                className="w-full bg-indigo-600 rounded-md transition-all duration-300"
+                                style={{ height: `${Math.min(100, (d.hrs / 4) * 100)}%` }}
+                                title={`${d.full}: ${d.hrs} hrs`}
+                              ></div>
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400">{d.day}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* AI Academic Workload Insight */}
+                    <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-indigo-900">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                        <span>{t.aiInsightTitle}</span>
+                      </div>
+                      <p className="text-indigo-800/80 leading-relaxed text-[11px]">
+                        {t.aiInsightDesc}
+                      </p>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* =========================================================================
+                UPLOAD TAB
+            ========================================================================= */}
+            {activeTab === 'upload' && (
+              <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
+                <div className="text-center max-w-xl mx-auto">
+                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{t.uploadTitle}</h1>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-1">{t.uploadSubtitle}</p>
+                </div>
+
+                {/* Dropzone Box */}
+                <div className="bg-white rounded-3xl border-2 border-dashed border-slate-300 p-8 sm:p-12 text-center hover:border-indigo-500 transition-all shadow-xs relative">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.txt"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
+                    <Upload className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900">{t.dragDrop}</h3>
+                  <p className="text-xs text-slate-500 mt-1">{t.supportsText}</p>
+
+                  <div className="mt-6 flex flex-wrap justify-center gap-3">
+                    <button
+                      onClick={loadSampleSyllabus}
+                      type="button"
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all relative z-10"
+                    >
+                      {t.loadSampleInstantly}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progressive AI Loading Indicator */}
+                {isExtracting && (
+                  <div className="bg-indigo-900 text-white p-6 rounded-3xl shadow-xl space-y-4 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />
+                        <span className="font-bold text-sm">Gemini AI is parsing document & extracting deadlines...</span>
+                      </div>
+                      <span className="text-xs font-bold bg-indigo-800 px-3 py-1 rounded-full">{extractionProgress}%</span>
+                    </div>
+                    <div className="w-full bg-indigo-950 rounded-full h-2 overflow-hidden">
+                      <div className="bg-gradient-to-r from-indigo-400 to-violet-400 h-2 transition-all duration-300" style={{ width: `${extractionProgress}%` }}></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Direct Text Paste Option */}
+                <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                  <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-indigo-600" /> {t.pasteTextTitle}
+                  </h3>
+                  <textarea
+                    rows={4}
+                    value={pastedText}
+                    onChange={(e) => setPastedText(e.target.value)}
+                    placeholder={t.pastePlaceholder}
+                    className="w-full rounded-2xl border border-slate-200 p-4 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleTextPasteUpload}
+                      disabled={isExtracting}
+                      className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95"
+                    >
+                      {t.extractAI}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Uploaded Documents List */}
+                {syllabi.length > 0 && (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                    <h3 className="font-bold text-slate-900 text-sm flex items-center justify-between">
+                      <span>{t.uploadedDocs} ({syllabi.length})</span>
+                      <span className="text-xs font-normal text-slate-400">All parsed</span>
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {syllabi.map(s => (
+                        <div key={s.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="px-2.5 py-1 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100">{s.courseCode}</span>
+                              <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Extracted
+                              </span>
+                            </div>
+                            <h4 className="font-bold text-slate-900 text-xs truncate">{s.fileName}</h4>
+                            <p className="text-[11px] text-slate-400 mt-1">{s.term}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            )}
+
+            {/* =========================================================================
+                EXTRACTED TASKS TAB
+            ========================================================================= */}
+            {activeTab === 'extraction' && (
+              <div className="space-y-6 animate-fade-in">
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{t.tasksTitle}</h1>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t.tasksSubtitle}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowAddTaskModal(true)}
+                      className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>{t.addTask}</span>
+                    </button>
+                    <button
+                      onClick={downloadCSV}
+                      className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-all"
+                    >
+                      {t.exportCsv}
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('planner')}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
+                    >
+                      {t.generatePlanBtn}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Toolbar: Search & Filter */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs">
+                  
+                  {/* Search input */}
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={t.searchPlaceholder}
+                      className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800"
+                    />
+                  </div>
+
+                  {/* Course Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                    {uniqueCourses.map(course => (
+                      <button
+                        key={course}
+                        onClick={() => setActiveCourseFilter(course)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                          activeCourseFilter === course
+                            ? 'bg-slate-900 text-white shadow-xs'
+                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                        }`}
+                      >
+                        {course}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sort dropdown */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-slate-400 font-semibold">{t.sortBy}</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none"
+                    >
+                      <option value="soonest">{t.sortSoonest}</option>
+                      <option value="latest">{t.sortLatest}</option>
+                      <option value="weight">{t.sortWeight}</option>
+                      <option value="course">{t.sortCourse}</option>
+                    </select>
+                  </div>
+
+                </div>
+
+                {/* Tasks Table */}
+                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+                  {filteredTasks.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                      <h3 className="font-bold text-slate-900 text-sm">{t.noTasks}</h3>
+                      <button onClick={loadSampleSyllabus} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">
+                        {t.loadSample}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <th className="py-4 px-6">{t.thCourse}</th>
+                            <th className="py-4 px-6">{t.thTask}</th>
+                            <th className="py-4 px-6">{t.thType}</th>
+                            <th className="py-4 px-6">{t.thDeadline}</th>
+                            <th className="py-4 px-6">{t.thWeight}</th>
+                            <th className="py-4 px-6">{t.thStatus}</th>
+                            <th className="py-4 px-6 text-right">{t.thActions}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+                          {filteredTasks.map(tk => (
+                            <tr key={tk.id} className="hover:bg-slate-50/60 transition-all">
+                              <td className="py-4 px-6 font-bold text-slate-900">
+                                <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs">
+                                  {tk.course}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 font-semibold text-slate-800">{tk.task}</td>
+                              <td className="py-4 px-6">
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                  tk.type === 'Exam' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                                  tk.type === 'Project' ? 'bg-violet-50 text-violet-700 border border-violet-100' :
+                                  'bg-amber-50 text-amber-700 border border-amber-100'
+                                }`}>
+                                  {tk.type}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 font-medium text-slate-600">{tk.deadline}</td>
+                              <td className="py-4 px-6 font-bold text-slate-900">{tk.weight}</td>
+                              <td className="py-4 px-6">
+                                <button
+                                  onClick={() => toggleTaskStatus(tk.id)}
+                                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                                    tk.status === 'Completed'
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                      : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  }`}
+                                >
+                                  {tk.status === 'Completed' ? t.completed : t.upcoming}
+                                </button>
+                              </td>
+                              <td className="py-4 px-6 text-right">
+                                <button
+                                  onClick={() => deleteTask(tk.id)}
+                                  className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-all"
+                                  title="Delete Task"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+            {/* =========================================================================
+                WEEKLY PLANNER TAB
+            ========================================================================= */}
+            {activeTab === 'planner' && (
+              <div className="space-y-8 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{t.plannerTitle}</h1>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t.plannerSubtitle}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowPreferencesModal(true)}
+                      className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>{t.rescheduleBtn}</span>
+                    </button>
+                    <button
+                      onClick={downloadICS}
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{t.exportCalendarBtn}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Weekly Plan Grid */}
+                {studyPlan.length === 0 ? (
+                  <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center">
+                    <CalendarIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <h3 className="font-bold text-slate-900 text-sm">No Study Plan Generated</h3>
+                    <button onClick={loadSampleSyllabus} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">
+                      {t.loadSample}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {studyPlan.map(week => (
+                      <div key={week.weekNum} className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs flex flex-col justify-between hover:border-indigo-300 transition-all">
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-extrabold text-xs border border-indigo-100">
+                              Week {week.weekNum}
+                            </span>
+                            <span className="text-xs font-bold text-slate-500">{week.allocatedHours} {t.hoursPlanned}</span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-800 mb-1">{week.dateRange}</p>
+                          <p className="text-xs text-slate-500 italic mb-4">{t.focus} {week.focus}</p>
+
+                          {week.note && (
+                            <div className="mb-4 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                              <span>{week.note}</span>
+                            </div>
+                          )}
+
+                          <div className="space-y-3">
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t.scheduledDeliverables}</p>
+                            {week.tasks && week.tasks.length > 0 ? (
+                              week.tasks.map(tk => (
+                                <div key={tk.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
+                                  <div>
+                                    <span className="text-xs font-bold text-indigo-600 block">{tk.course}</span>
+                                    <h4 className="font-bold text-slate-900 text-xs mt-0.5">{tk.task}</h4>
+                                    <span className="text-[10px] text-slate-400">{t.due} {tk.deadline}</span>
+                                  </div>
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-800">
+                                    {tk.weight}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-xs text-slate-400 italic">{t.noDeadlinesWeek}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-semibold">
+                          <span>Status: <span className="text-emerald-600">{week.status}</span></span>
+                          <span className="text-indigo-600 font-bold">{t.statusActive}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* =========================================================================
+                FOCUS POMODORO TIMER TAB
+            ========================================================================= */}
+            {activeTab === 'pomodoro' && (
+              <div className="max-w-xl mx-auto space-y-8 animate-fade-in text-center">
+                <div>
+                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{t.timerTitle}</h1>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-1">{t.timerSubtitle}</p>
+                </div>
+
+                <div className="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 shadow-xs space-y-8">
+                  {/* Mode Selector */}
+                  <div className="inline-flex p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+                    <button
+                      onClick={() => { setTimerMode('focus'); setTimerSeconds(25 * 60); setTimerRunning(false); }}
+                      className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${timerMode === 'focus' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}`}
+                    >
+                      {t.focusSession} (25m)
+                    </button>
+                    <button
+                      onClick={() => { setTimerMode('break'); setTimerSeconds(5 * 60); setTimerRunning(false); }}
+                      className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${timerMode === 'break' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}`}
+                    >
+                      {t.shortBreak} (5m)
+                    </button>
+                  </div>
+
+                  {/* Giant Timer Display */}
+                  <div className="text-6xl sm:text-7xl font-extrabold tracking-tight text-slate-900 font-mono">
+                    {formatTime(timerSeconds)}
+                  </div>
+
+                  {/* Play / Pause / Reset Controls */}
+                  <div className="flex items-center justify-center gap-4">
+                    <button
+                      onClick={() => setTimerRunning(!timerRunning)}
+                      className={`px-8 py-3.5 rounded-2xl text-sm font-bold shadow-md transition-all active:scale-95 flex items-center gap-2 ${
+                        timerRunning
+                          ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                      }`}
+                    >
+                      {timerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      <span>{timerRunning ? t.pauseTimer : t.startTimer}</span>
+                    </button>
+
+                    <button
+                      onClick={() => { setTimerRunning(false); setTimerSeconds(timerMode === 'focus' ? 25 * 60 : 5 * 60); }}
+                      className="px-5 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-bold transition-all"
+                    >
+                      {t.resetTimer}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </main>
+
+          {/* =========================================================================
+              STUDENT PROFILE NAME MODAL
+          ========================================================================= */}
+          {showNameModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+              <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <User className="w-4 h-4 text-indigo-600" />
+                    <span>{t.editName}</span>
+                  </h3>
+                  <button onClick={() => setShowNameModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <form onSubmit={handleSaveStudentName} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+                      Student Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="e.g. Alex Morgan"
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowNameModal(false)}
+                      className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+                    >
+                      {t.cancel}
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95"
+                    >
+                      Save Profile
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================================================
+              STUDY PREFERENCES MODAL
+          ========================================================================= */}
+          {showPreferencesModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+              <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <CalendarIcon className="w-5 h-5 text-indigo-600" /> {t.modalTitle}
+                  </h2>
+                  <button
+                    onClick={() => setShowPreferencesModal(false)}
+                    className="p-2 text-slate-400 hover:text-slate-600 rounded-xl"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleReschedule} className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      {t.availableStudyHours} ({preferences.studyHoursPerWeek} hrs)
+                    </label>
+                    <input
+                      type="range"
+                      min="5"
+                      max="40"
+                      step="5"
+                      value={preferences.studyHoursPerWeek}
+                      onChange={(e) => setPreferences({ ...preferences, studyHoursPerWeek: Number(e.target.value) })}
+                      className="w-full accent-indigo-600 cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      {t.unavailabilityTitle}
+                    </label>
+                    <select
+                      value={unavailableDays}
+                      onChange={(e) => setUnavailableDays(Number(e.target.value))}
+                      className="w-full rounded-2xl border border-slate-200 p-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                    >
+                      <option value={0}>{t.unavail0}</option>
+                      <option value={2}>{t.unavail2}</option>
+                      <option value={3}>{t.unavail3}</option>
+                      <option value={5}>{t.unavail5}</option>
+                    </select>
+                    <p className="text-[11px] text-slate-400 mt-1">{t.unavailabilityDesc}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      {t.workloadStrategy}
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'balanced', label: t.balanced },
+                        { id: 'front-load', label: t.frontLoad },
+                        { id: 'ease-in', label: t.easeIn },
+                      ].map(b => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setPreferences({ ...preferences, difficultyBalance: b.id })}
+                          className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                            preferences.difficultyBalance === b.id
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {b.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowPreferencesModal(false)}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                    >
+                      {t.cancel}
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95"
+                    >
+                      {t.savePlan}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================================================
+              ADD CUSTOM TASK MODAL
+          ========================================================================= */}
+          {showAddTaskModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-indigo-600" /> {t.createNewTaskTitle}
+                  </h2>
+                  <button
+                    onClick={() => setShowAddTaskModal(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddNewTask} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      {t.taskCourse}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. CS101 or MATH201"
+                      value={newTask.course}
+                      onChange={(e) => setNewTask({ ...newTask, course: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      {t.taskName}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Midterm Assessment or Lab 3"
+                      value={newTask.task}
+                      onChange={(e) => setNewTask({ ...newTask, task: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        {t.taskType}
+                      </label>
+                      <select
+                        value={newTask.type}
+                        onChange={(e) => setNewTask({ ...newTask, type: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
+                      >
+                        <option value="Assignment">Assignment</option>
+                        <option value="Exam">Exam</option>
+                        <option value="Quiz">Quiz</option>
+                        <option value="Project">Project</option>
+                        <option value="Milestone">Milestone</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        {t.taskWeight}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 20%"
+                        value={newTask.weight}
+                        onChange={(e) => setNewTask({ ...newTask, weight: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      {t.taskDeadline}
+                    </label>
+                    <input
+                      type="date"
+                      value={newTask.deadline}
+                      onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddTaskModal(false)}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+                    >
+                      {t.cancel}
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95"
+                    >
+                      {t.saveTask}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer className="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
+            <p>{t.footer}</p>
+          </footer>
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
