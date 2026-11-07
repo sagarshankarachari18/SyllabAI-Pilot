@@ -7,7 +7,7 @@
 ## ✨ Features
 
 - 👤 **Executive Professional Dashboard**:
-  - **Personalized Greeting**: Displays the student's name (e.g. *Welcome back, Alex Morgan 👋*) with editable profile.
+  - **Personalized Greeting**: Displays the student's name (e.g. *Welcome back, Sagar 👋*) with editable profile.
   - **Current Semester & Academic Progress**: Tracks term progress (*Fall 2026 · Week 9 of 16 · Midterms Period*) with an interactive progress bar showing deliverables completed.
   - **Courses Uploaded Overview**: Shows active course tags extracted from uploaded documents.
   - **Upcoming Assignments & Exams Cockpit**: Prioritizes imminent deadlines with color-coded urgency badges (*"Due in 2 days"*, *"Due Today!"*), exam warnings, weight impacts, and 1-click status completion.
