@@ -8,8 +8,10 @@ import streamlit as st
 from dotenv import load_dotenv
 
 # ── Load Environment Variables Safely ─────────────────────────────────────────
-env_path = os.path.join(os.path.dirname(__file__), "..", ".env", ".env")
-load_dotenv(dotenv_path=env_path)
+load_dotenv()
+env_nested_path = os.path.join(os.path.dirname(__file__), "..", ".env", ".env")
+if os.path.exists(env_nested_path):
+    load_dotenv(dotenv_path=env_nested_path)
 
 st.set_page_config(
     page_title="SyllabusPilot — AI University Study Planner",

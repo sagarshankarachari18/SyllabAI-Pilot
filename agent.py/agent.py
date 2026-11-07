@@ -10,9 +10,11 @@ import re
 from dotenv import load_dotenv
 from google import genai
 
-# Load .env from the nested path our project uses
+# Load .env safely
+load_dotenv()
 _env_path = os.path.join(os.path.dirname(__file__), "..", ".env", ".env")
-load_dotenv(dotenv_path=_env_path)
+if os.path.exists(_env_path):
+    load_dotenv(dotenv_path=_env_path)
 
 MODEL = "gemini-flash-latest"
 
