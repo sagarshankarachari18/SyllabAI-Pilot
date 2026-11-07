@@ -1,6 +1,7 @@
 # 🎓 SyllabusPilot — AI University Study Planner
 
 **SyllabusPilot** is an executive academic command center built for university students. Upload course syllabus files (PDF, text), let Google Gemini extract deadlines and assessment weights, and generate an optimized weekly study plan with real-time rescheduling, language selection, notifications, and calendar sync.
+An AI-powered agent built during the **Coding with AI: Building Agents** hackathon, hosted by **Google Developer Groups Riga** & **GDG on Campus RTU** on November 2, 2026.
 
 ---
 
