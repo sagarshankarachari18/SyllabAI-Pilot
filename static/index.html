@@ -1027,21 +1027,35 @@
       // Study hours logged this week
       const [studyHoursLogged, setStudyHoursLogged] = useState(() => {
         const saved = localStorage.getItem('sp_study_logged');
-        return saved !== null ? Number(saved) : 11.5;
+        return saved !== null ? Number(saved) : 0;
       });
 
       // Navigation state
       const [activeTab, setActiveTab] = useState('dashboard');
 
-      // Core data with localStorage persistence
+      // Core data with localStorage persistence (Clean default: only user-uploaded syllabus)
       const [syllabi, setSyllabi] = useState(() => {
         const saved = localStorage.getItem('sp_syllabi');
-        return saved ? JSON.parse(saved) : DEFAULT_SYLLABI;
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            const hasMock = parsed.some(s => s.id === 's1' || s.id === 's2' || s.id === 's3');
+            if (!hasMock) return parsed;
+          } catch(e) {}
+        }
+        return [];
       });
 
       const [tasks, setTasks] = useState(() => {
         const saved = localStorage.getItem('sp_tasks');
-        return saved ? JSON.parse(saved) : DEFAULT_TASKS;
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            const hasMock = parsed.some(t => t.id === 't1' || t.id === 't2' || t.source === 'CS101_Syllabus.pdf');
+            if (!hasMock) return parsed;
+          } catch(e) {}
+        }
+        return [];
       });
 
       const [preferences, setPreferences] = useState(() => {
@@ -1055,7 +1069,16 @@
 
       const [notifications, setNotifications] = useState(() => {
         const saved = localStorage.getItem('sp_notifs');
-        return saved ? JSON.parse(saved) : DEFAULT_NOTIFICATIONS;
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            const hasMock = parsed.some(n => n.id === 'n1' || n.id === 'n2');
+            if (!hasMock) return parsed;
+          } catch(e) {}
+        }
+        return [
+          { id: 'n_welcome', title: 'Welcome to SyllabusPilot! Upload your syllabus to get started.', time: 'Just now', type: 'info', read: false }
+        ];
       });
 
       // UI states
@@ -1288,8 +1311,14 @@
             source: fileName
           }));
 
-          setSyllabi(prev => [...prev, newSyllabus]);
-          setTasks(prev => [...prev, ...formattedNewTasks]);
+          setSyllabi(prev => {
+            const userOnly = prev.filter(s => s.id !== 's1' && s.id !== 's2' && s.id !== 's3');
+            return [...userOnly, newSyllabus];
+          });
+          setTasks(prev => {
+            const userOnly = prev.filter(t => t.id !== 't1' && t.id !== 't2' && t.id !== 't3' && t.id !== 't4' && t.id !== 't5' && t.id !== 't6' && t.id !== 't7' && t.id !== 't8' && t.source !== 'CS101_Syllabus.pdf' && t.source !== 'MATH201_Syllabus.pdf' && t.source !== 'ECON102_Outline.txt');
+            return [...userOnly, ...formattedNewTasks];
+          });
 
           setExtractionProgress(100);
           setTimeout(() => {
@@ -1338,14 +1367,16 @@
       };
 
       const resetAllData = () => {
-        if (window.confirm("Are you sure you want to reset all data to default demo state?")) {
-          setSyllabi(DEFAULT_SYLLABI);
-          setTasks(DEFAULT_TASKS);
-          setNotifications(DEFAULT_NOTIFICATIONS);
-          setStudyHoursLogged(11.5);
+        if (window.confirm("Are you sure you want to clear all data and start fresh?")) {
+          setSyllabi([]);
+          setTasks([]);
+          setNotifications([
+            { id: 'n_welcome', title: 'Data cleared. Upload your syllabus to begin.', time: 'Just now', type: 'info', read: false }
+          ]);
+          setStudyHoursLogged(0);
           setStudentName(t.studentDefault);
           localStorage.clear();
-          showToast('All data has been reset to defaults.');
+          showToast('All course data cleared. Ready for your syllabus.');
         }
       };
 
@@ -1452,6 +1483,28 @@
           counts[t.course] = (counts[t.course] || 0) + 1;
         });
         return counts;
+      }, [tasks]);
+
+      // Dynamic AI Workload Insight based on student's actual uploaded syllabus
+      const dynamicAiInsight = useMemo(() => {
+        if (tasks.length === 0) {
+          return "No course syllabus uploaded yet. Upload your course syllabus to receive automated AI workload analysis, weight impact breakdowns, and study schedules.";
+        }
+        const upcoming = tasks.filter(t => t.status !== 'Completed');
+        if (upcoming.length === 0) {
+          return "All extracted deliverables have been marked completed! Great job staying ahead of your academic schedule.";
+        }
+        const sortedByWeight = [...upcoming].sort((a, b) => {
+          const wB = parseInt(b.weight) || 0;
+          const wA = parseInt(a.weight) || 0;
+          return wB - wA;
+        });
+        const topTask = sortedByWeight[0];
+        const secondTask = sortedByWeight.length > 1 ? sortedByWeight[1] : null;
+        if (secondTask) {
+          return `Based on assessment weights from your uploaded syllabus, ${topTask.course} ${topTask.task} (${topTask.weight}) and ${secondTask.course} ${secondTask.task} (${secondTask.weight}) carry the highest grade impact. Prioritize these in your study sessions.`;
+        }
+        return `Based on your uploaded syllabus, ${topTask.course} ${topTask.task} (${topTask.weight}) carries the highest grade impact. Allocate focused study blocks before the ${topTask.deadline} deadline.`;
       }, [tasks]);
 
       // Calendar & CSV Exporters
@@ -1719,11 +1772,11 @@
                 {/* Primary Action Button */}
                 {tasks.length === 0 ? (
                   <button
-                    onClick={loadSampleSyllabus}
+                    onClick={() => setActiveTab('upload')}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>{t.loadSample}</span>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{t.uploadSyllabus}</span>
                   </button>
                 ) : (
                   <button
@@ -1875,11 +1928,15 @@
                     </div>
                     {/* Courses Chips */}
                     <div className="flex flex-wrap gap-1.5 mt-3">
-                      {syllabi.map(s => (
-                        <span key={s.id} className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700">
-                          {s.courseCode}
-                        </span>
-                      ))}
+                      {syllabi.length === 0 ? (
+                        <span className="text-[11px] text-slate-400 font-medium">Ready for syllabus upload</span>
+                      ) : (
+                        syllabi.map(s => (
+                          <span key={s.id} className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            {s.courseCode}
+                          </span>
+                        ))
+                      )}
                     </div>
                   </div>
 
@@ -1954,7 +2011,23 @@
                       </button>
                     </div>
 
-                    {upcomingTasks.length === 0 ? (
+                    {syllabi.length === 0 ? (
+                      <div className="py-10 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <h3 className="font-extrabold text-slate-900 text-sm">No Syllabus Uploaded Yet</h3>
+                        <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+                          Upload your course syllabus (PDF or text) to automatically view upcoming assignments, exams, and generated study schedules.
+                        </p>
+                        <button
+                          onClick={() => setActiveTab('upload')}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
+                        >
+                          Upload Your Syllabus →
+                        </button>
+                      </div>
+                    ) : upcomingTasks.length === 0 ? (
                       <div className="py-12 text-center text-slate-400">
                         <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
                         <p className="text-xs font-bold text-slate-700">{t.noUpcoming}</p>
@@ -2039,23 +2112,27 @@
                         <span>{t.courseDistribution}</span>
                       </h3>
                       <div className="space-y-3">
-                        {Object.entries(courseWorkload).map(([course, count]) => {
-                          const pct = Math.round((count / totalCount) * 100);
-                          return (
-                            <div key={course} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-bold text-slate-800">{course}</span>
-                                <span className="text-slate-500 font-semibold">{count} tasks ({pct}%)</span>
+                        {Object.keys(courseWorkload).length === 0 ? (
+                          <p className="text-xs text-slate-400 py-3 text-center">No syllabus uploaded yet</p>
+                        ) : (
+                          Object.entries(courseWorkload).map(([course, count]) => {
+                            const pct = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
+                            return (
+                              <div key={course} className="space-y-1">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-bold text-slate-800">{course}</span>
+                                  <span className="text-slate-500 font-semibold">{count} tasks ({pct}%)</span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-indigo-600 h-2 rounded-full"
+                                    style={{ width: `${pct}%` }}
+                                  ></div>
+                                </div>
                               </div>
-                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-indigo-600 h-2 rounded-full"
-                                  style={{ width: `${pct}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })
+                        )}
                       </div>
                     </div>
 
@@ -2101,7 +2178,7 @@
                         <span>{t.aiInsightTitle}</span>
                       </div>
                       <p className="text-indigo-800/80 leading-relaxed text-[11px]">
-                        {t.aiInsightDesc}
+                        {dynamicAiInsight}
                       </p>
                     </div>
 
@@ -2137,13 +2214,19 @@
                   <h3 className="text-base font-bold text-slate-900">{t.dragDrop}</h3>
                   <p className="text-xs text-slate-500 mt-1">{t.supportsText}</p>
 
-                  <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <div className="mt-6 flex flex-col items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all pointer-events-none"
+                    >
+                      Browse PDF or Text File
+                    </button>
                     <button
                       onClick={loadSampleSyllabus}
                       type="button"
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all relative z-10"
+                      className="text-[11px] text-slate-400 hover:text-indigo-600 font-semibold underline underline-offset-2 transition-all relative z-10 pt-1"
                     >
-                      {t.loadSampleInstantly}
+                      (Demo test: {t.loadSampleInstantly})
                     </button>
                   </div>
                 </div>
@@ -2304,9 +2387,10 @@
                   {filteredTasks.length === 0 ? (
                     <div className="p-12 text-center">
                       <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                      <h3 className="font-bold text-slate-900 text-sm">{t.noTasks}</h3>
-                      <button onClick={loadSampleSyllabus} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">
-                        {t.loadSample}
+                      <h3 className="font-bold text-slate-900 text-sm">No Tasks Extracted Yet</h3>
+                      <p className="text-xs text-slate-500 mt-1 mb-4">Upload your course syllabus to automatically extract deadlines and assessment weights.</p>
+                      <button onClick={() => setActiveTab('upload')} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">
+                        Upload Your Syllabus →
                       </button>
                     </div>
                   ) : (
@@ -2408,8 +2492,9 @@
                   <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center">
                     <CalendarIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                     <h3 className="font-bold text-slate-900 text-sm">No Study Plan Generated</h3>
-                    <button onClick={loadSampleSyllabus} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">
-                      {t.loadSample}
+                    <p className="text-xs text-slate-500 mt-1 mb-4">Upload your syllabus first or click generate to plan your study sessions.</p>
+                    <button onClick={() => setActiveTab('upload')} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">
+                      Upload Your Syllabus →
                     </button>
                   </div>
                 ) : (
